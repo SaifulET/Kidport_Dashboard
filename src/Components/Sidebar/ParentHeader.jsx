@@ -13,13 +13,13 @@ const ParentHeader = ({ showDrawer }) => {
         <button onClick={showDrawer} className="lg:hidden text-[#64748b] hover:text-[#0f172a] transition-colors flex-shrink-0">
           <Menu size={24} strokeWidth={2} />
         </button>
-        <h1 className="text-[13px] font-bold text-[#1eb4cd] tracking-[0.15em] uppercase hidden sm:block">
-          KIDPORT PARENT ADMIN
+        <h1 className="text-xl font-bold text-[#1eb4cd] tracking-tight hidden sm:block">
+          Parent Dashboard
         </h1>
       </div>
 
       {/* Middle: Search Box */}
-      <div className="flex-1 max-w-3xl px-4 md:px-12">
+      {/* <div className="flex-1 max-w-3xl px-4 md:px-12">
         <div className="relative flex items-center w-full">
           <Search className="absolute left-3 text-gray-400" size={15} strokeWidth={2} />
           <input
@@ -28,7 +28,7 @@ const ParentHeader = ({ showDrawer }) => {
             className="w-full h-[42px] pl-11 pr-4 text-[13px] text-gray-700 bg-[#f8fafc] border border-[#e2e8f0] rounded-full focus:outline-none focus:ring-1 focus:ring-gray-200 focus:bg-white transition-all placeholder:text-[#94a3b8]"
           />
         </div>
-      </div>
+      </div> */}
 
       {/* Right side: Icons and Profile */}
       <div className="flex items-center gap-6">

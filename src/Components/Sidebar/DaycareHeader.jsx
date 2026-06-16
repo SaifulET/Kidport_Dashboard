@@ -6,20 +6,17 @@ const DaycareHeader = ({ showDrawer }) => {
   const navigate = useNavigate();
   return (
     <div className="h-[72px] flex items-center justify-between px-4 md:px-8 bg-white border-b border-gray-100 font-sans">
-      
+
       {/* Left: Mobile Menu & Search Box */}
       <div className="flex items-center flex-1 max-w-[500px] gap-3">
         <button onClick={showDrawer} className="lg:hidden text-[#64748b] hover:text-[#0f172a] transition-colors flex-shrink-0">
           <Menu size={24} strokeWidth={2} />
         </button>
-        <div className="relative flex items-center w-full">
-          <Search className="absolute left-4 text-[#94a3b8]" size={18} strokeWidth={2} />
-          <input 
-            type="text"
-            placeholder="Search users, children, observations..." 
-            className="w-full h-[42px] pl-11 pr-4 text-[13px] text-gray-700 bg-[#f8fafc] border border-[#e2e8f0] rounded-full focus:outline-none focus:ring-1 focus:ring-gray-200 focus:bg-white transition-all placeholder:text-[#94a3b8]"
-          />
-        </div>
+
+        <h1 className="text-xl font-bold text-[#1eb4cd] tracking-tight hidden sm:block">
+          Daycare Dashboard
+        </h1>
+
       </div>
 
       {/* Right side: Icons and Profile */}
@@ -29,9 +26,9 @@ const DaycareHeader = ({ showDrawer }) => {
           <Bell size={22} strokeWidth={1.5} />
           <span className="absolute -top-0.5 right-0 w-2.5 h-2.5 bg-[#f87171] rounded-full border-2 border-white"></span>
         </button>
-        
+
         {/* Profile Section */}
-        <div 
+        <div
           onClick={() => navigate('/settings')}
           className="flex items-center gap-3 cursor-pointer pl-6 border-l border-gray-100 hover:bg-gray-50 p-2 -my-2 rounded-lg transition-colors"
         >
@@ -48,7 +45,7 @@ const DaycareHeader = ({ showDrawer }) => {
           <ChevronDown size={14} className="text-[#94a3b8]" />
         </div>
       </div>
-      
+
     </div>
   );
 };
