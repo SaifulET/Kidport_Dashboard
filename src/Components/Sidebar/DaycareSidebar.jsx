@@ -10,14 +10,14 @@ import {
   MessageSquare,
   LogOut
 } from "lucide-react";
+import { clearSession } from "../../lib/api";
 
 const DaycareSidebar = ({ closeDrawer }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('role');
+    clearSession();
     navigate('/sign-in');
   };
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { CreditCard, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
-const SubscriptionTable = ({ subscriptions, filterStatus, setFilterStatus, filterPlanType, setFilterPlanType }) => {
+const SubscriptionTable = ({ subscriptions, filterStatus, setFilterStatus, filterPlanType, setFilterPlanType, total = subscriptions.length }) => {
   const tabs = ['All Subs', 'Active', 'Expiring', 'Cancelled'];
 
   return (
@@ -82,8 +82,8 @@ const SubscriptionTable = ({ subscriptions, filterStatus, setFilterStatus, filte
                     <p className="text-[#94A3B8] text-[13px]">{sub.plan.split(' ')[1]}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-white text-[13px] font-medium">{sub.date.split(',')[0]}</p>
-                    <p className="text-[#94A3B8] text-[13px]">{sub.date.split(',')[1]}</p>
+                    <p className="text-white text-[13px] font-medium">{new Date(sub.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>
+                    <p className="text-[#94A3B8] text-[13px]">{new Date(sub.date).getFullYear()}</p>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-[#94A3B8] text-[13px] font-medium">
@@ -120,7 +120,7 @@ const SubscriptionTable = ({ subscriptions, filterStatus, setFilterStatus, filte
 
         {/* Footer Pagination */}
         <div className="mt-auto px-6 py-4 border-t border-[#1E293B] flex items-center justify-between">
-          <p className="text-[#64748B] text-[12px] font-bold">Showing {subscriptions.length} of 12,458 subscribers</p>
+          <p className="text-[#64748B] text-[12px] font-bold">Showing {subscriptions.length} of {Number(total || 0).toLocaleString()} subscribers</p>
           <div className="flex items-center gap-1">
             <button className="w-8 h-8 flex items-center justify-center rounded-lg text-[#64748B] hover:bg-[#1E293B] hover:text-white transition-colors">
               <ChevronLeft size={16} />

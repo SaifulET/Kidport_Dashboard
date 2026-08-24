@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, MoreVertical, Calendar, Heart, TrendingUp, RefreshCw, Loader2, X, AlertTriangle } from 'lucide-react';
+import { apiGet, apiPatch } from '../../lib/api';
 
 const DaycareChildren = () => {
   const [loading, setLoading] = useState(true);
@@ -29,12 +30,15 @@ const DaycareChildren = () => {
 
   const handleDeleteConfirm = () => {
     if (childToDelete) {
+      apiPatch(`/admin/children/${childToDelete.id}/status`, { status: 'deleted' }).catch((error) => {
+        console.error("Error deleting child:", error);
+      });
       setData(prev => ({
         ...prev,
         stats: {
           ...prev.stats,
           total: (parseInt(prev.stats.total) - 1).toString(),
-          active: (parseInt(prev.stats.active) - 1).toString()
+          active: Math.max(parseInt(prev.stats.active) - (childToDelete.blocked ? 0 : 1), 0).toString()
         },
         children: prev.children.filter(c => c.id !== childToDelete.id)
       }));
@@ -45,11 +49,15 @@ const DaycareChildren = () => {
 
   const handleBlockConfirm = () => {
     if (childToBlock) {
+      const nextBlocked = !childToBlock.blocked;
+      apiPatch(`/admin/children/${childToBlock.id}/status`, { status: nextBlocked ? 'archived' : 'active' }).catch((error) => {
+        console.error("Error updating child:", error);
+      });
       setData(prev => ({
         ...prev,
         children: prev.children.map(c => 
           c.id === childToBlock.id 
-            ? { ...c, blocked: !c.blocked } 
+            ? { ...c, blocked: nextBlocked } 
             : c
         )
       }));
@@ -62,68 +70,20 @@ const DaycareChildren = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const [childrenResponse, summaryResponse] = await Promise.all([
+          apiGet('/admin/children?limit=100'),
+          apiGet('/admin/children-summary')
+        ]);
 
         setData({
           stats: {
-            total: "823",
-            active: "789",
-            observations: "12,456",
-            avgAge: "2.6 yrs"
+            total: summaryResponse.data.total.toLocaleString(),
+            active: summaryResponse.data.active.toLocaleString(),
+            observations: summaryResponse.data.observations.toLocaleString(),
+            avgAge: summaryResponse.data.avgAge
           },
-          children: [
-            {
-              id: 1,
-              initials: 'EJ', color: 'bg-[#06b6d4]',
-              name: 'Emma Johnson', age: '2 years 4 months',
-              born: 'Dec 15, 2022',
-              parents: 'Sarah & Michael Johnson',
-              observations: 145, milestones: 32, careCircle: 4,
-              lastActivity: '2 hours ago',
-              blocked: false
-            },
-            {
-              id: 2,
-              initials: 'LS', color: 'bg-[#f97316]',
-              name: 'Liam Smith', age: '3 years 2 months',
-              born: 'Feb 8, 2022',
-              parents: 'Emily & David Smith',
-              observations: 203, milestones: 45, careCircle: 5,
-              lastActivity: '1 hour ago',
-              blocked: false
-            },
-            {
-              id: 3,
-              initials: 'OM', color: 'bg-[#fca5a5]',
-              name: 'Olivia Martinez', age: '1 year 8 months',
-              born: 'Aug 22, 2023',
-              parents: 'Carlos & Ana Martinez',
-              observations: 98, milestones: 18, careCircle: 3,
-              lastActivity: '5 hours ago',
-              blocked: false
-            },
-            {
-              id: 4,
-              initials: 'NB', color: 'bg-[#a855f7]',
-              name: 'Noah Brown', age: '4 years 1 month',
-              born: 'Mar 10, 2021',
-              parents: 'Jennifer & Robert Brown',
-              observations: 287, milestones: 58, careCircle: 6,
-              lastActivity: '30 min ago',
-              blocked: false
-            },
-            {
-              id: 5,
-              initials: 'SD', color: 'bg-[#fbbf24]',
-              name: 'Sophia Davis', age: '2 years 9 months',
-              born: 'Jul 5, 2022',
-              parents: 'Amanda Davis',
-              observations: 167, milestones: 38, careCircle: 3,
-              lastActivity: '3 days ago',
-              blocked: false
-            }
-          ],
-          totalChildren: 823
+          children: childrenResponse.data.map((child) => ({ ...child, color: 'bg-[#06b6d4]' })),
+          totalChildren: childrenResponse.pagination.total
         });
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -169,14 +129,12 @@ const DaycareChildren = () => {
     );
   }
 
-  // To simulate the 823 total children from the screenshot
-  const displayTotal = data.totalChildren;
+  const displayTotal = filteredChildren.length;
   const totalPages = Math.ceil(displayTotal / itemsPerPage) || 1;
   const startIndex = (page - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, displayTotal);
 
-  // For demonstration, we just show the 5 mocked items if page is 1
-  const currentChildren = page === 1 ? filteredChildren : [];
+  const currentChildren = filteredChildren.slice(startIndex, endIndex);
 
   return (
     <div className="min-h-screen bg-[#fdfdfd] p-4 md:p-6 lg:p-10 font-sans text-[#1e293b]">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, User, MessageSquare, AlertCircle, Clock, CheckCircle2, ChevronRight, Inbox, Mail, ShieldAlert, Paperclip, Trash2, X } from 'lucide-react';
+import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api';
 
 const DEFAULT_TICKETS = [
   {
@@ -166,26 +167,40 @@ const DaycareSupport = () => {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    const fetchTickets = () => {
-      const saved = localStorage.getItem("seymour_support_tickets");
-      if (saved) {
-        setTickets(JSON.parse(saved));
-      } else {
-        localStorage.setItem("seymour_support_tickets", JSON.stringify(DEFAULT_TICKETS));
-        setTickets(DEFAULT_TICKETS);
+    const fetchTickets = async () => {
+      try {
+        const response = await apiGet('/admin/support/tickets?limit=100');
+        setTickets(response.data.map((ticket) => ({ ...ticket, messages: ticket.messages || [] })));
+      } catch (error) {
+        console.error("Error fetching support tickets:", error);
+        setTickets([]);
       }
     };
 
     fetchTickets();
-    // Poll every 2 seconds to check if parent sent a new message
-    const interval = setInterval(fetchTickets, 2000);
+    const interval = setInterval(fetchTickets, 10000);
     return () => clearInterval(interval);
   }, []);
 
-  const saveTickets = (updated) => {
-    setTickets(updated);
-    localStorage.setItem("seymour_support_tickets", JSON.stringify(updated));
-  };
+  useEffect(() => {
+    const loadMessages = async () => {
+      const activeTicket = tickets.find(t => t.id === activeTicketId);
+      if (!activeTicket?.userId || activeTicket.messages?.length) return;
+
+      try {
+        const response = await apiGet(`/admin/support/tickets/${activeTicket.userId}/messages?limit=100`);
+        setTickets((previous) =>
+          previous.map((ticket) =>
+            ticket.id === activeTicket.id ? { ...ticket, messages: response.data } : ticket
+          )
+        );
+      } catch (error) {
+        console.error("Error fetching support messages:", error);
+      }
+    };
+
+    loadMessages();
+  }, [activeTicketId, tickets]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -195,17 +210,13 @@ const DaycareSupport = () => {
 
   const activeTicket = tickets.find(t => t.id === activeTicketId);
 
-  const handleSendReply = (e) => {
+  const handleSendReply = async (e) => {
     e.preventDefault();
     if (!replyMessage.trim() || !activeTicketId) return;
+    if (!activeTicket?.userId) return;
 
-    const newReply = {
-      id: Date.now(),
-      sender: "agent",
-      senderName: "Maya",
-      text: replyMessage.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
+    const response = await apiPost(`/admin/support/tickets/${activeTicket.userId}/messages`, { text: replyMessage.trim() });
+    const newReply = response.data;
 
     const updated = tickets.map(t => {
       if (t.id === activeTicketId) {
@@ -218,19 +229,21 @@ const DaycareSupport = () => {
       return t;
     });
 
-    saveTickets(updated);
+    setTickets(updated);
     setReplyMessage("");
   };
 
-  const handleResolveTicket = () => {
+  const handleResolveTicket = async () => {
     if (!activeTicketId) return;
+    const nextStatus = activeTicket.status === 'resolved' ? 'open' : 'resolved';
+    await apiPatch(`/admin/support/tickets/${activeTicketId}/status`, { status: nextStatus });
     const updated = tickets.map(t => {
       if (t.id === activeTicketId) {
-        return { ...t, status: t.status === 'Resolved' ? 'Active' : 'Resolved' };
+        return { ...t, status: nextStatus };
       }
       return t;
     });
-    saveTickets(updated);
+    setTickets(updated);
   };
 
   return (
@@ -317,12 +330,12 @@ const DaycareSupport = () => {
                     <button 
                       onClick={handleResolveTicket}
                       className={`text-[10px] font-bold tracking-wider uppercase px-4 py-2 rounded-lg transition-colors border ${
-                        activeTicket.status === 'Resolved'
+                        activeTicket.status === 'resolved'
                           ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100'
                           : 'bg-white hover:bg-gray-50 text-gray-600 border-gray-200'
                       }`}
                     >
-                      {activeTicket.status === 'Resolved' ? 'Resolved' : 'Mark Resolved'}
+                      {activeTicket.status === 'resolved' ? 'Resolved' : 'Mark Resolved'}
                     </button>
                     <button 
                       onClick={() => setShowDeleteModal(true)}
@@ -537,8 +550,11 @@ const DaycareSupport = () => {
               </button>
               <button 
                 onClick={() => {
+                  apiDelete(`/admin/support/tickets/${activeTicketId}`).catch((error) => {
+                    console.error("Error deleting support ticket:", error);
+                  });
                   const updated = tickets.filter(t => t.id !== activeTicketId);
-                  saveTickets(updated);
+                  setTickets(updated);
                   setActiveTicketId(null);
                   setShowDeleteModal(false);
                 }}

@@ -1,6 +1,7 @@
 export const USER_ROLES = Object.freeze({
   PARENT: "parent",
   DAYCARE: "daycare",
+  ADMIN: "admin",
 });
 
 const LEGACY_ROLE_MAP = {
@@ -11,7 +12,7 @@ const LEGACY_ROLE_MAP = {
 export const getCurrentRole = () => {
   const role = localStorage.getItem("role");
 
-  if (role === USER_ROLES.PARENT || role === USER_ROLES.DAYCARE) {
+  if (role === USER_ROLES.PARENT || role === USER_ROLES.DAYCARE || role === USER_ROLES.ADMIN) {
     return role;
   }
 

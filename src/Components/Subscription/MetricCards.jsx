@@ -1,7 +1,12 @@
 import React from 'react';
 import { Users, Banknote, CalendarCheck, RefreshCcw, TrendingUp } from 'lucide-react';
 
-const MetricCards = () => {
+const MetricCards = ({ metrics = {} }) => {
+  const totalSubscribers = Number(metrics.totalSubscribers || 0).toLocaleString();
+  const monthlyRevenue = `$${Number(metrics.monthlyRevenue || 0).toLocaleString()}`;
+  const yearlyMembersPercent = `${Number(metrics.yearlyMembersPercent || 0)}%`;
+  const renewalRate = `${Number(metrics.renewalRate || 0)}%`;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       {/* Card 1: Total Subscribers */}
@@ -16,7 +21,7 @@ const MetricCards = () => {
           </div>
         </div>
         <p className="text-[#94A3B8] text-[12px] font-bold mb-1">Total Subscribers</p>
-        <h3 className="text-white text-[28px] font-bold">12,458</h3>
+        <h3 className="text-white text-[28px] font-bold">{totalSubscribers}</h3>
       </div>
 
       {/* Card 2: Monthly Revenue */}
@@ -31,7 +36,7 @@ const MetricCards = () => {
           </div>
         </div>
         <p className="text-[#94A3B8] text-[12px] font-bold mb-1">Monthly Revenue</p>
-        <h3 className="text-white text-[28px] font-bold">$48,290</h3>
+        <h3 className="text-white text-[28px] font-bold">{monthlyRevenue}</h3>
       </div>
 
       {/* Card 3: Yearly Members */}
@@ -45,7 +50,7 @@ const MetricCards = () => {
           </div>
         </div>
         <p className="text-[#94A3B8] text-[12px] font-bold mb-1">Yearly Members</p>
-        <h3 className="text-white text-[28px] font-bold">74%</h3>
+        <h3 className="text-white text-[28px] font-bold">{yearlyMembersPercent}</h3>
       </div>
 
       {/* Card 4: Renewal Rate */}
@@ -59,7 +64,7 @@ const MetricCards = () => {
           </div>
         </div>
         <p className="text-[#94A3B8] text-[12px] font-bold mb-1">Renewal Rate</p>
-        <h3 className="text-white text-[28px] font-bold">91%</h3>
+        <h3 className="text-white text-[28px] font-bold">{renewalRate}</h3>
       </div>
     </div>
   );

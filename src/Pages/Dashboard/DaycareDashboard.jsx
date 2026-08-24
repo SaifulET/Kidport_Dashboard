@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, TrendingDown, Loader2, Users, Smile, Eye, Brain, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import { apiGet } from '../../lib/api';
+
+const formatNumber = (value) => Number(value || 0).toLocaleString();
 
 export default function DaycareDashboard() {
   const navigate = useNavigate();
@@ -12,34 +15,17 @@ export default function DaycareDashboard() {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        
-        setData({
-          userActivityData: [
-            { name: 'Apr 1', value: 140 },
-            { name: 'Apr 2', value: 180 },
-            { name: 'Apr 3', value: 160 },
-            { name: 'Apr 4', value: 200 },
-            { name: 'Apr 5', value: 190 },
-            { name: 'Apr 6', value: 220 },
-            { name: 'Apr 7', value: 240 }
-          ],
-          rolesData: [
-            { name: 'Parents', value: 456, color: '#00b4d8' },
-            { name: 'Daycare', value: 87, color: '#ff9f1c' }
-          ],
-          observationsData: [
-            { name: 'Mon', value: 45 },
-            { name: 'Tue', value: 52 },
-            { name: 'Wed', value: 38 },
-            { name: 'Thu', value: 61 },
-            { name: 'Fri', value: 48 },
-            { name: 'Sat', value: 34 },
-            { name: 'Sun', value: 28 }
-          ]
-        });
+        const response = await apiGet('/admin/dashboard');
+        setData(response.data);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        setData({
+          stats: { totalDaycares: 0, totalChildren: 0, dailyObservations: 0, activeCareCircle: 0 },
+          userActivityData: [],
+          rolesData: [],
+          observationsData: [],
+          alerts: [{ id: 'error', type: 'danger', title: error.message || 'Unable to load admin dashboard', time: 'Now' }]
+        });
       } finally {
         setLoading(false);
       }
@@ -84,7 +70,7 @@ export default function DaycareDashboard() {
             </div>
             <div>
               <p className="text-[12px] font-medium text-[#64748b] mb-1">Total Daycare</p>
-              <h3 className="text-2xl font-bold text-[#0f172a]">1,247</h3>
+              <h3 className="text-2xl font-bold text-[#0f172a]">{formatNumber(data.stats?.totalDaycares)}</h3>
             </div>
           </div>
 
@@ -101,7 +87,7 @@ export default function DaycareDashboard() {
             </div>
             <div>
               <p className="text-[12px] font-medium text-[#64748b] mb-1">Total Children</p>
-              <h3 className="text-2xl font-bold text-[#0f172a]">823</h3>
+              <h3 className="text-2xl font-bold text-[#0f172a]">{formatNumber(data.stats?.totalChildren)}</h3>
             </div>
           </div>
 
@@ -118,7 +104,7 @@ export default function DaycareDashboard() {
             </div>
             <div>
               <p className="text-[12px] font-medium text-[#64748b] mb-1">Daily Observations</p>
-              <h3 className="text-2xl font-bold text-[#0f172a]">3,892</h3>
+              <h3 className="text-2xl font-bold text-[#0f172a]">{formatNumber(data.stats?.dailyObservations)}</h3>
             </div>
           </div>
 
@@ -135,7 +121,7 @@ export default function DaycareDashboard() {
             </div>
             <div>
               <p className="text-[12px] font-medium text-[#64748b] mb-1">Active Care Circle</p>
-              <h3 className="text-2xl font-bold text-[#0f172a]">1456</h3>
+              <h3 className="text-2xl font-bold text-[#0f172a]">{formatNumber(data.stats?.activeCareCircle)}</h3>
             </div>
           </div>
         </div>
@@ -258,16 +244,10 @@ export default function DaycareDashboard() {
               <button onClick={() => navigate('/daycare-notifications')} className="text-[12px] font-bold text-[#06b6d4] hover:text-[#0891b2] transition-colors">View All</button>
             </div>
             <div className="space-y-6">
-              {[
-                { initial: 'SM', color: 'bg-[#bbf7d0] text-[#166534]', name: 'Sarah Martinez', desc: 'Added observation for Emma', time: '2 min ago' },
-                { initial: 'JD', color: 'bg-[#bbf7d0] text-[#166534]', name: 'John Davidson', desc: 'Marked milestone achieved', time: '8 min ago' },
-                { initial: 'EC', color: 'bg-[#bbf7d0] text-[#166534]', name: 'Emily Chen', desc: 'Uploaded video observation', time: '15 min ago', flag: true },
-                { initial: 'MR', color: 'bg-[#bbf7d0] text-[#166534]', name: 'Michael Roberts', desc: 'Joined care circle', time: '23 min ago' },
-                { initial: 'JL', color: 'bg-[#bbf7d0] text-[#166534]', name: 'Jennifer Lee', desc: 'Updated child profile', time: '35 min ago' }
-              ].map((act, i) => (
+              {(data.recentActivity || []).map((act, i) => (
                 <div key={i} className="flex items-center justify-between group">
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-[12px] ${act.color}`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-[12px] ${act.color || 'bg-[#bbf7d0] text-[#166534]'}`}>
                       {act.initial}
                     </div>
                     <div>
@@ -294,29 +274,19 @@ export default function DaycareDashboard() {
             <h3 className="text-[14px] font-bold text-[#1e293b] mb-6">System Alerts</h3>
             <div className="space-y-4">
               
-              <div className="p-4 rounded-xl border border-[#fde68a] bg-[#fffbeb] flex items-start gap-3">
-                <AlertTriangle size={18} className="text-[#d97706] mt-0.5" />
-                <div>
-                  <h4 className="text-[13px] font-bold text-[#92400e]">3 support tickets need attention</h4>
-                  <p className="text-[11px] text-[#b45309] mt-0.5">10 min ago</p>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl border border-[#fecaca] bg-[#fef2f2] flex items-start gap-3">
-                <AlertTriangle size={18} className="text-[#e11d48] mt-0.5" />
-                <div>
-                  <h4 className="text-[13px] font-bold text-[#9f1239]">AI flagged 2 observations for review</h4>
-                  <p className="text-[11px] text-[#be123c] mt-0.5">25 min ago</p>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl border border-[#bfdbfe] bg-[#eff6ff] flex items-start gap-3">
-                <CheckCircle size={18} className="text-[#2563eb] mt-0.5" />
-                <div>
-                  <h4 className="text-[13px] font-bold text-[#1e40af]">System backup completed successfully</h4>
-                  <p className="text-[11px] text-[#1d4ed8] mt-0.5">1 hour ago</p>
-                </div>
-              </div>
+              {(data.alerts || []).map((alert) => {
+                const isDanger = alert.type === 'danger';
+                const isInfo = alert.type === 'info';
+                return (
+                  <div key={alert.id} className={`p-4 rounded-xl border flex items-start gap-3 ${isDanger ? 'border-[#fecaca] bg-[#fef2f2]' : isInfo ? 'border-[#bfdbfe] bg-[#eff6ff]' : 'border-[#fde68a] bg-[#fffbeb]'}`}>
+                    {isInfo ? <CheckCircle size={18} className="text-[#2563eb] mt-0.5" /> : <AlertTriangle size={18} className={`${isDanger ? 'text-[#e11d48]' : 'text-[#d97706]'} mt-0.5`} />}
+                    <div>
+                      <h4 className={`text-[13px] font-bold ${isDanger ? 'text-[#9f1239]' : isInfo ? 'text-[#1e40af]' : 'text-[#92400e]'}`}>{alert.title}</h4>
+                      <p className={`text-[11px] mt-0.5 ${isDanger ? 'text-[#be123c]' : isInfo ? 'text-[#1d4ed8]' : 'text-[#b45309]'}`}>{alert.time}</p>
+                    </div>
+                  </div>
+                );
+              })}
 
             </div>
           </div>

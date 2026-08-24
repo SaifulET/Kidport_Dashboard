@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, Video, Mic, FileText, Eye, CheckCircle2, Flag, Clock, Loader2, Trash2, AlertTriangle, X } from 'lucide-react';
+import { apiDelete, apiGet } from '../../lib/api';
 
 const DaycareObservations = () => {
   const [loading, setLoading] = useState(true);
@@ -15,6 +16,9 @@ const DaycareObservations = () => {
 
   const handleDeleteConfirm = () => {
     if (obsToDelete) {
+      apiDelete(`/admin/observations/${obsToDelete.id}`).catch((error) => {
+        console.error("Error deleting observation:", error);
+      });
       setData(prev => ({
         ...prev,
         stats: {
@@ -33,69 +37,23 @@ const DaycareObservations = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        
+        const response = await apiGet('/admin/observations?limit=100');
         setData({
           stats: {
-            total: "12,456",
-            today: "142",
-            byDaycare: "8,924",
-            byParent: "3,532"
+            total: response.stats.total.toLocaleString(),
+            today: response.stats.today.toLocaleString(),
+            byDaycare: response.stats.byDaycare.toLocaleString(),
+            byParent: response.stats.byParent.toLocaleString()
           },
-          observations: [
-            {
-              id: 1,
-              type: 'video',
-              iconColor: 'bg-[#f3e8ff] text-[#a855f7]',
-              title: 'Playing with blocks',
-              subtitle: 'Emma built a tower with 5 blocks independently',
-              child: 'Emma Johnson',
-              author: 'Sarah Martinez',
-              time: '2 hours ago',
-              tags: ['Motor', 'Cognitive'],
-              insights: 3,
-              status: ['Processed']
-            },
-            {
-              id: 2,
-              type: 'audio',
-              iconColor: 'bg-[#e0f2fe] text-[#3b82f6]',
-              title: 'Speaking in sentences',
-              subtitle: 'Liam used complete sentences to express needs',
-              child: 'Liam Smith',
-              author: 'Emily Chen',
-              time: '3 hours ago',
-              tags: ['Language', 'Social'],
-              insights: 2,
-              status: ['Processed']
-            },
-            {
-              id: 3,
-              type: 'document',
-              iconColor: 'bg-[#f1f5f9] text-[#475569]',
-              title: 'Sharing toys with friends',
-              subtitle: 'Demonstrated empathy and sharing behavior',
-              child: 'Olivia Martinez',
-              author: 'John Davidson',
-              time: '5 hours ago',
-              tags: ['Social'],
-              insights: 1,
-              status: ['Flagged', 'Pending']
-            },
-            {
-              id: 4,
-              type: 'visual',
-              iconColor: 'bg-[#fce7f3] text-[#ec4899]',
-              title: 'Drawing shapes',
-              subtitle: 'Drew circles and squares accurately',
-              child: 'Noah Brown',
-              author: 'Michael Roberts',
-              time: '1 day ago',
-              tags: ['Motor', 'Cognitive'],
-              insights: 4,
-              status: ['Processed']
-            }
-          ]
+          observations: response.data.map((observation) => ({
+            ...observation,
+            type: observation.type === 'photo' ? 'visual' : observation.type === 'voice' ? 'audio' : observation.type,
+            iconColor:
+              observation.type === 'video' ? 'bg-[#f3e8ff] text-[#a855f7]' :
+              observation.type === 'voice' ? 'bg-[#e0f2fe] text-[#3b82f6]' :
+              observation.type === 'photo' ? 'bg-[#fce7f3] text-[#ec4899]' :
+              'bg-[#f1f5f9] text-[#475569]'
+          }))
         });
       } catch (error) {
         console.error("Error fetching data:", error);

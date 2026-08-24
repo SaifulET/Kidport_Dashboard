@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { USER_ROLES } from "../../../utils/roles";
+import { apiPost, saveSession } from "../../../lib/api";
 
 const SignIn = () => {
   const navigate = useNavigate();
@@ -9,29 +9,20 @@ const SignIn = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSignIn = (e) => {
+  const handleSignIn = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    // Simulating login without actual API call
-    setTimeout(() => {
+    try {
+      const response = await apiPost('/auth/admin/login', { email, password });
+      saveSession(response.data);
+      navigate("/");
+    } catch (error) {
+      setError(error.message || "Invalid email or password");
+    } finally {
       setLoading(false);
-
-      if (email === "adminparent@gmail.com" && password === "123456") {
-        localStorage.setItem("user", "authenticated");
-        localStorage.setItem("role", USER_ROLES.PARENT);
-        navigate("/");
-
-      } else if (email === "admindaycare@gmail.com" && password === "123456") {
-        localStorage.setItem("user", "authenticated");
-        localStorage.setItem("role", USER_ROLES.DAYCARE);
-        navigate("/");
-
-      } else {
-        setError("Invalid email or password");
-      }
-    }, 1500);
+    }
   };
 
   return (

@@ -16,6 +16,7 @@ import {
   UserX,
   X,
 } from 'lucide-react';
+import { apiDelete, apiGet, apiPatch } from '../../lib/api';
 
 const ROLE_STYLES = {
   Parent: 'bg-[#cffafe] text-[#0891b2] border-[#a5f3fc]',
@@ -40,26 +41,13 @@ const getInitials = (name) =>
     .substring(0, 2)
     .toUpperCase();
 
-const getChildIdsForUser = (user, children) =>
-  children
-    .filter((child) =>
-      user.role === 'Parent'
-        ? child.parentIds.includes(user.id)
-        : child.daycareIds.includes(user.id)
-    )
-    .map((child) => child.id);
+const getChildIdsForUser = (user) => user.childIds || user.children?.map((child) => child.id) || [];
 
-const getChildrenForUser = (user, children) =>
-  children.filter((child) =>
-    user.role === 'Parent'
-      ? child.parentIds.includes(user.id)
-      : child.daycareIds.includes(user.id)
-  );
+const getChildrenForUser = (user) => user.children || [];
 
 const DaycareUserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
-  const [children, setChildren] = useState([]);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('Parent');
   const [statusFilter, setStatusFilter] = useState('All Status');
@@ -72,122 +60,11 @@ const DaycareUserManagement = () => {
     const fetchUserData = async () => {
       setLoading(true);
       try {
-        await new Promise((resolve) => setTimeout(resolve, 600));
-
-        setUsers([
-          {
-            id: 1,
-            name: 'Sarah Martinez',
-            email: 'sarah.martinez@email.com',
-            phone: '+1 (555) 123-4567',
-            role: 'Parent',
-            status: 'Active',
-            blocked: false,
-            createdDate: 'Jan 15, 2025',
-            color: 'bg-[#06b6d4]',
-          },
-          {
-            id: 2,
-            name: 'John Davidson',
-            email: 'john.davidson@email.com',
-            phone: '+1 (555) 234-5678',
-            role: 'Parent',
-            status: 'Active',
-            blocked: true,
-            createdDate: 'Feb 3, 2025',
-            color: 'bg-[#f97316]',
-          },
-          {
-            id: 3,
-            name: 'Bright Start Daycare',
-            email: 'admin@brightstart.example',
-            phone: '+1 (555) 345-6789',
-            role: 'Daycare',
-            status: 'Active',
-            blocked: false,
-            createdDate: 'Dec 8, 2024',
-            color: 'bg-[#8b5cf6]',
-          },
-          {
-            id: 4,
-            name: 'Little Steps Center',
-            email: 'hello@littlesteps.example',
-            phone: '+1 (555) 456-7890',
-            role: 'Daycare',
-            status: 'Active',
-            blocked: true,
-            createdDate: 'Nov 22, 2024',
-            color: 'bg-[#14b8a6]',
-          },
-          {
-            id: 5,
-            name: 'Jennifer Lee',
-            email: 'jennifer.lee@email.com',
-            phone: '+1 (555) 567-8901',
-            role: 'Parent',
-            status: 'Active',
-            blocked: true,
-            createdDate: 'Oct 5, 2024',
-            color: 'bg-[#f59e0b]',
-          },
-        ]);
-
-        setChildren([
-          {
-            id: 101,
-            name: 'Mia Martinez',
-            dob: 'May 14, 2021',
-            age: '5',
-            gender: 'Female',
-            image: 'https://i.pravatar.cc/120?u=mia-martinez',
-            parentIds: [1],
-            daycareIds: [3],
-            relationship: 'Daughter',
-            development: 'Language growth on track; working on peer-led play routines.',
-            status: 'Active',
-          },
-          {
-            id: 102,
-            name: 'Leo Martinez',
-            dob: 'Aug 2, 2023',
-            age: '3',
-            gender: 'Male',
-            image: 'https://i.pravatar.cc/120?u=leo-martinez',
-            parentIds: [1],
-            daycareIds: [3, 4],
-            relationship: 'Son',
-            development: 'Gross motor milestones progressing; needs nap transition support.',
-            status: 'Active',
-          },
-          {
-            id: 103,
-            name: 'Ava Davidson',
-            dob: 'Jan 19, 2022',
-            age: '4',
-            gender: 'Female',
-            image: 'https://i.pravatar.cc/120?u=ava-davidson',
-            parentIds: [2],
-            daycareIds: [4],
-            relationship: 'Daughter',
-            development: 'Fine motor practice assigned; enjoys visual routines.',
-            status: 'Inactive',
-          },
-          {
-            id: 104,
-            name: 'Noah Lee',
-            dob: 'Mar 30, 2020',
-            age: '6',
-            gender: 'Male',
-            image: 'https://i.pravatar.cc/120?u=noah-lee',
-            parentIds: [5],
-            daycareIds: [3],
-            relationship: 'Son',
-            development: 'Ready for advanced social-emotional check-ins.',
-            status: 'Active',
-          },
-        ]);
+        const response = await apiGet('/admin/users?limit=100');
+        setUsers(response.data);
       } catch (error) {
         console.error('Error fetching user data:', error);
+        setUsers([]);
       } finally {
         setLoading(false);
       }
@@ -201,9 +78,9 @@ const DaycareUserManagement = () => {
       users.map((user) => ({
         ...user,
         initials: getInitials(user.name),
-        childIds: getChildIdsForUser(user, children),
+        childIds: getChildIdsForUser(user),
       })),
-    [users, children]
+    [users]
   );
 
   const filteredUsers = useMemo(() => {
@@ -259,36 +136,26 @@ const DaycareUserManagement = () => {
   const detailsUser = enrichedUsers.find((user) => user.id === detailsUserId);
   const deleteUser = enrichedUsers.find((user) => user.id === deleteUserId);
   const blockUser = enrichedUsers.find((user) => user.id === blockUserId);
-  const detailsChildren = detailsUser ? getChildrenForUser(detailsUser, children) : [];
-  const deleteChildren = deleteUser ? getChildrenForUser(deleteUser, children) : [];
+  const detailsChildren = detailsUser ? getChildrenForUser(detailsUser) : [];
+  const deleteChildren = deleteUser ? getChildrenForUser(deleteUser) : [];
 
-
-
-  const toggleBlocked = (userId) => {
+  const toggleBlocked = async (userId) => {
+    const user = users.find((item) => item.id === userId);
+    if (!user) return;
+    const nextBlocked = !user.blocked;
+    await apiPatch(`/admin/users/${userId}/status`, { status: nextBlocked ? 'disabled' : 'active' });
     setUsers((previousUsers) =>
-      previousUsers.map((user) =>
-        user.id === userId ? { ...user, blocked: !user.blocked } : user
+      previousUsers.map((item) =>
+        item.id === userId ? { ...item, blocked: nextBlocked, status: nextBlocked ? 'Blocked' : 'Active' } : item
       )
     );
   };
 
-  const confirmDeleteUser = () => {
+  const confirmDeleteUser = async () => {
     if (!deleteUser) return;
 
+    await apiDelete(`/admin/users/${deleteUser.id}`);
     setUsers((previousUsers) => previousUsers.filter((user) => user.id !== deleteUser.id));
-    setChildren((previousChildren) =>
-      previousChildren.map((child) => ({
-        ...child,
-        parentIds:
-          deleteUser.role === 'Parent'
-            ? child.parentIds.filter((parentId) => parentId !== deleteUser.id)
-            : child.parentIds,
-        daycareIds:
-          deleteUser.role === 'Daycare'
-            ? child.daycareIds.filter((daycareId) => daycareId !== deleteUser.id)
-            : child.daycareIds,
-      }))
-    );
     setDeleteUserId(null);
     if (detailsUserId === deleteUser.id) {
       setDetailsUserId(null);
@@ -497,8 +364,8 @@ const DaycareUserManagement = () => {
         <BlockModal
           user={blockUser}
           onClose={() => setBlockUserId(null)}
-          onConfirm={() => {
-            toggleBlocked(blockUser.id);
+          onConfirm={async () => {
+            await toggleBlocked(blockUser.id);
             setBlockUserId(null);
           }}
         />

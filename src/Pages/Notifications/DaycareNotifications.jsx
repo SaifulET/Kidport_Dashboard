@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, AlertTriangle, UserPlus, Check, MessageSquare, Loader2, Info } from 'lucide-react';
+import { apiGet, apiPatch } from '../../lib/api';
+
+const formatNotificationDate = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return { date: '', time: '' };
+  return {
+    date: date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
+    time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  };
+};
 
 const DaycareNotifications = () => {
   const [loading, setLoading] = useState(true);
@@ -11,16 +21,8 @@ const DaycareNotifications = () => {
     const fetchNotifications = async () => {
       setLoading(true);
       try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        setNotifications([
-          { id: 1, type: 'alert', title: 'Behavioral Flag Raised', message: 'A new behavioral flag was raised for Lucas Montgomery.', time: '10:42 AM', date: 'Today', read: false },
-          { id: 2, type: 'message', title: 'New Parent Message', message: 'Elena Rodriguez sent a new message regarding pickup.', time: '08:15 AM', date: 'Today', read: false },
-          { id: 3, type: 'user', title: 'Child Registration', message: 'Julianna Abrams was successfully registered.', time: '03:22 PM', date: 'Yesterday', read: true },
-          { id: 4, type: 'info', title: 'Daily Report Generated', message: 'All daily reports for Pre-K class have been generated.', time: '11:05 AM', date: 'Yesterday', read: true },
-          { id: 5, type: 'alert', title: 'Missing Documentation', message: 'Medical forms missing for Oliver Smith.', time: '09:30 AM', date: 'Oct 24', read: true },
-          { id: 6, type: 'info', title: 'System Maintenance', message: 'Scheduled maintenance completed.', time: '02:00 AM', date: 'Oct 24', read: true },
-        ]);
+        const response = await apiGet('/admin/notifications?limit=100');
+        setNotifications(response.data.map((notification) => ({ ...notification, ...formatNotificationDate(notification.date) })));
       } finally {
         setLoading(false);
       }
@@ -28,11 +30,13 @@ const DaycareNotifications = () => {
     fetchNotifications();
   }, []);
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    await apiPatch('/admin/notifications/read-all', {});
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
-  const markAsRead = (id) => {
+  const markAsRead = async (id) => {
+    await apiPatch(`/admin/notifications/${id}/read`, {});
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
