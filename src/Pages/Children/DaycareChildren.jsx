@@ -14,6 +14,19 @@ const DaycareChildren = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [childToDelete, setChildToDelete] = useState(null);
 
+  const [blockModalOpen, setBlockModalOpen] = useState(false);
+  const [childToBlock, setChildToBlock] = useState(null);
+
+  const [activeDropdownChildId, setActiveDropdownChildId] = useState(null);
+
+  useEffect(() => {
+    const handleOutsideClick = () => {
+      setActiveDropdownChildId(null);
+    };
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, []);
+
   const handleDeleteConfirm = () => {
     if (childToDelete) {
       setData(prev => ({
@@ -27,6 +40,21 @@ const DaycareChildren = () => {
       }));
       setDeleteModalOpen(false);
       setChildToDelete(null);
+    }
+  };
+
+  const handleBlockConfirm = () => {
+    if (childToBlock) {
+      setData(prev => ({
+        ...prev,
+        children: prev.children.map(c => 
+          c.id === childToBlock.id 
+            ? { ...c, blocked: !c.blocked } 
+            : c
+        )
+      }));
+      setBlockModalOpen(false);
+      setChildToBlock(null);
     }
   };
 
@@ -51,7 +79,8 @@ const DaycareChildren = () => {
               born: 'Dec 15, 2022',
               parents: 'Sarah & Michael Johnson',
               observations: 145, milestones: 32, careCircle: 4,
-              lastActivity: '2 hours ago'
+              lastActivity: '2 hours ago',
+              blocked: false
             },
             {
               id: 2,
@@ -60,7 +89,8 @@ const DaycareChildren = () => {
               born: 'Feb 8, 2022',
               parents: 'Emily & David Smith',
               observations: 203, milestones: 45, careCircle: 5,
-              lastActivity: '1 hour ago'
+              lastActivity: '1 hour ago',
+              blocked: false
             },
             {
               id: 3,
@@ -69,7 +99,8 @@ const DaycareChildren = () => {
               born: 'Aug 22, 2023',
               parents: 'Carlos & Ana Martinez',
               observations: 98, milestones: 18, careCircle: 3,
-              lastActivity: '5 hours ago'
+              lastActivity: '5 hours ago',
+              blocked: false
             },
             {
               id: 4,
@@ -78,7 +109,8 @@ const DaycareChildren = () => {
               born: 'Mar 10, 2021',
               parents: 'Jennifer & Robert Brown',
               observations: 287, milestones: 58, careCircle: 6,
-              lastActivity: '30 min ago'
+              lastActivity: '30 min ago',
+              blocked: false
             },
             {
               id: 5,
@@ -87,7 +119,8 @@ const DaycareChildren = () => {
               born: 'Jul 5, 2022',
               parents: 'Amanda Davis',
               observations: 167, milestones: 38, careCircle: 3,
-              lastActivity: '3 days ago'
+              lastActivity: '3 days ago',
+              blocked: false
             }
           ],
           totalChildren: 823
@@ -244,19 +277,54 @@ const DaycareChildren = () => {
                       {child.initials}
                     </div>
                     <div>
-                      <h3 className="text-[15px] font-bold text-[#0f172a] leading-tight mb-0.5">{child.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-[15px] font-bold text-[#0f172a] leading-tight mb-0.5">{child.name}</h3>
+                        {child.blocked && (
+                          <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                            Blocked
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[12px] text-[#64748b] font-medium">{child.age}</p>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => {
-                      setChildToDelete(child);
-                      setDeleteModalOpen(true);
-                    }}
-                    className="text-[#94a3b8] hover:text-[#475569] transition-colors p-1"
-                  >
-                    <MoreVertical size={18} />
-                  </button>
+                  <div className="relative">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveDropdownChildId(activeDropdownChildId === child.id ? null : child.id);
+                      }}
+                      className="text-[#94a3b8] hover:text-[#475569] transition-colors p-1"
+                    >
+                      <MoreVertical size={18} />
+                    </button>
+                    {activeDropdownChildId === child.id && (
+                      <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-100 rounded-xl shadow-xl z-30 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveDropdownChildId(null);
+                            setChildToBlock(child);
+                            setBlockModalOpen(true);
+                          }}
+                          className="w-full px-4 py-2 text-left text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
+                          {child.blocked ? 'Unblock' : 'Block'}
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveDropdownChildId(null);
+                            setChildToDelete(child);
+                            setDeleteModalOpen(true);
+                          }}
+                          className="w-full px-4 py-2 text-left text-xs font-bold text-red-500 hover:bg-red-50 transition-colors border-t border-gray-100/50"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Details */}
@@ -292,10 +360,31 @@ const DaycareChildren = () => {
                 <div className="mb-6">
                   <p className="text-[11px] font-semibold text-[#64748b] mb-3">Development Focus</p>
                   <div className="flex gap-2">
-                    <div className="h-1.5 flex-1 bg-[#06b6d4] rounded-full"></div>
-                    <div className="h-1.5 flex-1 bg-[#fbbf24] rounded-full"></div>
-                    <div className="h-1.5 flex-1 bg-[#fca5a5] rounded-full"></div>
-                    <div className="h-1.5 flex-1 bg-[#a855f7] rounded-full"></div>
+                    {[
+                      { name: 'Language & Literacy', color: 'bg-[#06b6d4]', pct: ((child.id * 17 + 50) % 41) + 55 },
+                      { name: 'Motor', color: 'bg-[#10b981]', pct: ((child.id * 23 + 40) % 36) + 60 },
+                      { name: 'Social', color: 'bg-[#fbbf24]', pct: ((child.id * 13 + 60) % 46) + 50 },
+                      { name: 'Cognitive', color: 'bg-[#ef4444]', pct: ((child.id * 29 + 30) % 31) + 65 },
+                      { name: 'Creative Arts & Expression', color: 'bg-[#a855f7]', pct: ((child.id * 19 + 70) % 41) + 55 },
+                      { name: 'Community & Self-Awareness', color: 'bg-[#ec4899]', pct: ((child.id * 7 + 80) % 36) + 60 }
+                    ].map((domain, index) => (
+                      <div 
+                        key={index} 
+                        title={`${domain.name}: ${domain.pct}%`}
+                        className="h-1.5 flex-1 bg-[#f1f5f9] dark:bg-gray-800 rounded-full cursor-pointer relative group transition-all duration-300 hover:scale-y-150"
+                      >
+                        {/* Progress Fill */}
+                        <div 
+                          className={`h-full ${domain.color} rounded-full`}
+                          style={{ width: `${domain.pct}%` }}
+                        ></div>
+                        {/* Custom Tooltip */}
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-[#1e293b] text-white text-[10px] font-bold py-1 px-2.5 rounded shadow-lg whitespace-nowrap z-20 pointer-events-none transition-all">
+                          {domain.name}: {domain.pct}%
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1e293b]"></div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -401,6 +490,70 @@ const DaycareChildren = () => {
                     className="px-5 py-2.5 text-[13px] font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-sm"
                   >
                     Delete Profile
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Block Confirmation Modal */}
+        {blockModalOpen && childToBlock && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-xl animate-in zoom-in-95 duration-200 border border-[#e2e8f0]">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-6">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${childToBlock.blocked ? 'bg-emerald-100 text-emerald-500' : 'bg-amber-100 text-amber-500'}`}>
+                    {childToBlock.blocked ? <Heart size={24} strokeWidth={2} /> : <AlertTriangle size={24} strokeWidth={2} />}
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setBlockModalOpen(false);
+                      setChildToBlock(null);
+                    }} 
+                    className="text-[#94a3b8] hover:text-[#0f172a] transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                
+                <h2 className="text-xl font-bold text-[#0f172a] mb-2">
+                  {childToBlock.blocked ? 'Unblock Child Profile?' : 'Block Child Profile?'}
+                </h2>
+                <p className="text-[#64748b] text-[14px] leading-relaxed mb-6">
+                  Are you sure you want to {childToBlock.blocked ? 'unblock' : 'block'} <strong className="text-[#0f172a]">{childToBlock.name}</strong>?
+                  {childToBlock.blocked 
+                    ? ' This will restore their active status and access within the daycare system.' 
+                    : ' This will suspend their profile access and highlight them as blocked.'}
+                </p>
+
+                <div className="bg-[#f8fafc] p-4 rounded-xl border border-[#e2e8f0] mb-8 flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-[14px] shadow-sm ${childToBlock.color}`}>
+                    {childToBlock.initials}
+                  </div>
+                  <div>
+                    <h3 className="text-[14px] font-bold text-[#0f172a]">{childToBlock.name}</h3>
+                    <p className="text-[12px] text-[#64748b]">Parents: {childToBlock.parents}</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <button 
+                    onClick={() => {
+                      setBlockModalOpen(false);
+                      setChildToBlock(null);
+                    }} 
+                    className="px-5 py-2.5 text-[13px] font-semibold text-[#64748b] hover:text-[#0f172a] hover:bg-[#f8fafc] border border-transparent hover:border-[#e2e8f0] rounded-xl transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleBlockConfirm}
+                    className={`px-5 py-2.5 text-[13px] font-semibold text-white rounded-xl transition-colors shadow-sm ${
+                      childToBlock.blocked ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-amber-500 hover:bg-amber-600'
+                    }`}
+                  >
+                    {childToBlock.blocked ? 'Unblock Child' : 'Block Child'}
                   </button>
                 </div>
               </div>

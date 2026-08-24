@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, ChevronDown, Video, Mic, FileText, Eye, CheckCircle2, Flag, Clock, Loader2 } from 'lucide-react';
+import { Search, ChevronDown, Video, Mic, FileText, Eye, CheckCircle2, Flag, Clock, Loader2, Trash2, AlertTriangle, X } from 'lucide-react';
 
 const DaycareObservations = () => {
   const [loading, setLoading] = useState(true);
@@ -8,7 +8,26 @@ const DaycareObservations = () => {
   // Search and Filter State
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('All Types');
-  const [statusFilter, setStatusFilter] = useState('All Status');
+
+  // Delete observation modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [obsToDelete, setObsToDelete] = useState(null);
+
+  const handleDeleteConfirm = () => {
+    if (obsToDelete) {
+      setData(prev => ({
+        ...prev,
+        stats: {
+          ...prev.stats,
+          total: (parseInt(prev.stats.total.replace(/,/g, '')) - 1).toLocaleString(),
+          today: (parseInt(prev.stats.today) - 1).toString()
+        },
+        observations: prev.observations.filter(o => o.id !== obsToDelete.id)
+      }));
+      setDeleteModalOpen(false);
+      setObsToDelete(null);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -19,9 +38,9 @@ const DaycareObservations = () => {
         setData({
           stats: {
             total: "12,456",
-            processed: "1,456",
-            pending: "23",
-            flagged: "5"
+            today: "142",
+            byDaycare: "8,924",
+            byParent: "3,532"
           },
           observations: [
             {
@@ -97,11 +116,10 @@ const DaycareObservations = () => {
         obs.author.toLowerCase().includes(searchLower);
       
       const matchesType = typeFilter === 'All Types' || obs.type === typeFilter.toLowerCase();
-      const matchesStatus = statusFilter === 'All Status' || obs.status.includes(statusFilter);
 
-      return matchesSearch && matchesType && matchesStatus;
+      return matchesSearch && matchesType;
     });
-  }, [data, search, typeFilter, statusFilter]);
+  }, [data, search, typeFilter]);
 
   if (loading || !data) {
     return (
@@ -124,35 +142,7 @@ const DaycareObservations = () => {
     }
   };
 
-  const renderStatusPills = (statuses) => {
-    return statuses.map((status, index) => {
-      if (status === 'Processed') {
-        return (
-          <div key={index} className="flex items-center gap-1.5 bg-[#ecfdf5] text-[#10b981] px-3 py-1.5 rounded-full text-[12px] font-semibold border border-[#d1fae5]">
-            <CheckCircle2 size={14} strokeWidth={2.5} />
-            Processed
-          </div>
-        );
-      }
-      if (status === 'Flagged') {
-        return (
-          <div key={index} className="flex items-center gap-1.5 bg-[#fef2f2] text-[#ef4444] px-3 py-1.5 rounded-full text-[12px] font-semibold border border-[#fee2e2]">
-            <Flag size={14} strokeWidth={2.5} />
-            Flagged
-          </div>
-        );
-      }
-      if (status === 'Pending') {
-        return (
-          <div key={index} className="flex items-center gap-1.5 bg-[#fffbeb] text-[#d97706] px-3 py-1.5 rounded-full text-[12px] font-semibold border border-[#fef3c7]">
-            <Clock size={14} strokeWidth={2.5} />
-            Pending
-          </div>
-        );
-      }
-      return null;
-    });
-  };
+
 
   return (
     <div className="min-h-screen bg-[#fdfdfd] p-6 lg:p-10 font-sans text-[#1e293b]">
@@ -164,7 +154,7 @@ const DaycareObservations = () => {
           <p className="text-[13px] text-[#64748b]">Monitor and review all recorded observations</p>
         </div>
 
-        {/* 4 Stat Cards */}
+        {/* Stat Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-[14px] border border-gray-100 p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] relative overflow-hidden">
             <p className="text-[12px] font-medium text-[#64748b] mb-2">Total Observations</p>
@@ -173,21 +163,21 @@ const DaycareObservations = () => {
           </div>
 
           <div className="bg-white rounded-[14px] border border-gray-100 p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] relative overflow-hidden">
-            <p className="text-[12px] font-medium text-[#64748b] mb-2">Processed Today</p>
-            <h3 className="text-[28px] font-bold text-[#0f172a] mb-2">{data.stats.processed}</h3>
+            <p className="text-[12px] font-medium text-[#64748b] mb-2">Today's Observations</p>
+            <h3 className="text-[28px] font-bold text-[#0f172a] mb-2">{data.stats.today}</h3>
             <div className="absolute bottom-6 left-6 right-6 h-1 bg-[#10b981]"></div>
           </div>
 
           <div className="bg-white rounded-[14px] border border-gray-100 p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] relative overflow-hidden">
-            <p className="text-[12px] font-medium text-[#64748b] mb-2">Pending Review</p>
-            <h3 className="text-[28px] font-bold text-[#0f172a] mb-2">{data.stats.pending}</h3>
+            <p className="text-[12px] font-medium text-[#64748b] mb-2">Observations by Daycare</p>
+            <h3 className="text-[28px] font-bold text-[#0f172a] mb-2">{data.stats.byDaycare}</h3>
             <div className="absolute bottom-6 left-6 right-6 h-1 bg-[#fbbf24]"></div>
           </div>
 
           <div className="bg-white rounded-[14px] border border-gray-100 p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] relative overflow-hidden">
-            <p className="text-[12px] font-medium text-[#64748b] mb-2">Flagged</p>
-            <h3 className="text-[28px] font-bold text-[#0f172a] mb-2">{data.stats.flagged}</h3>
-            <div className="absolute bottom-6 left-6 right-6 h-1 bg-[#ef4444]"></div>
+            <p className="text-[12px] font-medium text-[#64748b] mb-2">Observations by Parent</p>
+            <h3 className="text-[28px] font-bold text-[#0f172a] mb-2">{data.stats.byParent}</h3>
+            <div className="absolute bottom-6 left-6 right-6 h-1 bg-[#a855f7]"></div>
           </div>
         </div>
 
@@ -220,20 +210,6 @@ const DaycareObservations = () => {
               </select>
               <ChevronDown size={14} strokeWidth={3} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
             </div>
-
-            <div className="relative w-full sm:w-auto">
-              <select 
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full pl-4 pr-10 py-2.5 bg-[#f8fafc] border border-gray-100 rounded-full text-[13px] font-semibold text-[#475569] appearance-none focus:outline-none focus:ring-1 focus:ring-gray-200 cursor-pointer sm:min-w-[130px]"
-              >
-                <option value="All Status">All Status</option>
-                <option value="Processed">Processed</option>
-                <option value="Pending">Pending</option>
-                <option value="Flagged">Flagged</option>
-              </select>
-              <ChevronDown size={14} strokeWidth={3} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
-            </div>
           </div>
         </div>
 
@@ -254,9 +230,6 @@ const DaycareObservations = () => {
                     <div>
                       <h3 className="text-[16px] font-bold text-[#0f172a] mb-1 leading-tight">{obs.title}</h3>
                       <p className="text-[13px] text-[#64748b]">{obs.subtitle}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-                      {renderStatusPills(obs.status)}
                     </div>
                   </div>
 
@@ -290,6 +263,20 @@ const DaycareObservations = () => {
 
                 </div>
 
+                {/* Actions: Delete button */}
+                <div className="self-center shrink-0">
+                  <button 
+                    onClick={() => {
+                      setObsToDelete(obs);
+                      setDeleteModalOpen(true);
+                    }}
+                    className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2.5 rounded-xl transition-all duration-200"
+                    title="Delete Observation"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+
               </div>
             ))
           ) : (
@@ -298,6 +285,63 @@ const DaycareObservations = () => {
             </div>
           )}
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {deleteModalOpen && obsToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-xl animate-in zoom-in-95 duration-200 border border-[#e2e8f0]">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-500">
+                    <AlertTriangle size={24} strokeWidth={2} />
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setDeleteModalOpen(false);
+                      setObsToDelete(null);
+                    }} 
+                    className="text-[#94a3b8] hover:text-[#0f172a] transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                
+                <h2 className="text-xl font-bold text-[#0f172a] mb-2">Delete Observation?</h2>
+                <p className="text-[#64748b] text-[14px] leading-relaxed mb-6">
+                  Are you sure you want to delete the observation <strong className="text-[#0f172a]">"{obsToDelete.title}"</strong>? This action cannot be undone.
+                </p>
+
+                <div className="bg-[#f8fafc] p-4 rounded-xl border border-[#e2e8f0] mb-8 flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${obsToDelete.iconColor}`}>
+                    {getIcon(obsToDelete.type)}
+                  </div>
+                  <div>
+                    <h3 className="text-[14px] font-bold text-[#0f172a]">{obsToDelete.title}</h3>
+                    <p className="text-[12px] text-[#64748b]">Child: {obsToDelete.child}</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <button 
+                    onClick={() => {
+                      setDeleteModalOpen(false);
+                      setObsToDelete(null);
+                    }} 
+                    className="px-5 py-2.5 text-[13px] font-semibold text-[#64748b] hover:text-[#0f172a] hover:bg-[#f8fafc] border border-transparent hover:border-[#e2e8f0] rounded-xl transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleDeleteConfirm}
+                    className="px-5 py-2.5 text-[13px] font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-sm"
+                  >
+                    Delete Observation
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

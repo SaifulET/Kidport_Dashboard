@@ -5,9 +5,9 @@ import {
   Users,
   Smile,
   Brain,
-  BarChart2,
   Settings,
   Eye,
+  MessageSquare,
   LogOut
 } from "lucide-react";
 
@@ -17,17 +17,18 @@ const DaycareSidebar = ({ closeDrawer }) => {
 
   const handleLogout = () => {
     localStorage.removeItem('user');
+    localStorage.removeItem('role');
     navigate('/sign-in');
   };
 
   const dashboardMenuItems = [
     { icon: LayoutGrid, label: "Dashboard", Link: "/" },
-    { icon: Users, label: "Users", Link: "/user-management" },
+    { icon: Users, label: "Caregivers", Link: "/user-management" },
     { icon: Smile, label: "Children Profiles", Link: "/children" },
     { icon: Eye, label: "Observations", Link: "/observations" },
     { icon: Brain, label: "Milestones / AI", Link: "/ai-monitoring" },
-    { icon: BarChart2, label: "Reports / Analytics", Link: "/reports" },
     { icon: Settings, label: "Settings", Link: "/settings" },
+    { icon: MessageSquare, label: "Support Desk", Link: "/support" },
   ];
 
   return (
@@ -44,7 +45,7 @@ const DaycareSidebar = ({ closeDrawer }) => {
           <span className="text-xl font-bold text-[#1eb4cd] tracking-tight">KIDPort</span>
         </div>
         <p className="text-[11px] text-gray-500 pl-1">
-          Admin Dashboard
+          Daycare Section
         </p>
       </div>
 

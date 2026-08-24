@@ -1,74 +1,193 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { ChevronDown, Loader2, Search, Filter, Mail, Phone, Calendar, Edit, MoreVertical, UserCheck, UserX, X, AlertTriangle } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  AlertTriangle,
+  Ban,
+  Calendar,
+  ChevronDown,
+  Eye,
+  Loader2,
+  Mail,
+  Phone,
+  Power,
+  Search,
+  ShieldCheck,
+  Trash2,
+  UserCheck,
+  UserX,
+  X,
+} from 'lucide-react';
+
+const ROLE_STYLES = {
+  Parent: 'bg-[#cffafe] text-[#0891b2] border-[#a5f3fc]',
+  Daycare: 'bg-[#ede9fe] text-[#7c3aed] border-[#ddd6fe]',
+};
+
+const STATUS_STYLES = {
+  Active: 'text-[#10b981] bg-[#ecfdf5] border-[#a7f3d0]',
+  Inactive: 'text-[#64748b] bg-[#f8fafc] border-[#e2e8f0]',
+};
+
+const PROFILE_SECTIONS = [
+  { role: 'Parent', label: 'Parent Profiles' },
+  { role: 'Daycare', label: 'Daycare' },
+];
+
+const getInitials = (name) =>
+  name
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
+
+const getChildIdsForUser = (user, children) =>
+  children
+    .filter((child) =>
+      user.role === 'Parent'
+        ? child.parentIds.includes(user.id)
+        : child.daycareIds.includes(user.id)
+    )
+    .map((child) => child.id);
+
+const getChildrenForUser = (user, children) =>
+  children.filter((child) =>
+    user.role === 'Parent'
+      ? child.parentIds.includes(user.id)
+      : child.daycareIds.includes(user.id)
+  );
 
 const DaycareUserManagement = () => {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState(null);
-
-  // Search, Filter, and Pagination State (Dashboard)
-  const [dashSearch, setDashSearch] = useState('');
-  const [dashRole, setDashRole] = useState('All Roles');
-  const [dashStatus, setDashStatus] = useState('All Status');
-  const [dashPage, setDashPage] = useState(1);
-
-  // Edit Modal State
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-
-  // Delete Modal State
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState(null);
-
-  const handleDeleteConfirm = () => {
-    if (userToDelete) {
-      setData(prev => ({
-        ...prev,
-        dashStats: {
-          ...prev.dashStats,
-          total: (parseInt(prev.dashStats.total.replace(/,/g, '')) - 1).toLocaleString(),
-          active: userToDelete.status === 'Active'
-            ? (parseInt(prev.dashStats.active.replace(/,/g, '')) - 1).toLocaleString()
-            : prev.dashStats.active,
-          inactive: userToDelete.status === 'Inactive'
-            ? (parseInt(prev.dashStats.inactive.replace(/,/g, '')) - 1).toLocaleString()
-            : prev.dashStats.inactive
-        },
-        dashUsers: prev.dashUsers.filter(u => u.id !== userToDelete.id)
-      }));
-      setDeleteModalOpen(false);
-      setUserToDelete(null);
-    }
-  };
-
-  const handleEditClick = (user) => {
-    setEditingUser(user);
-    setIsEditModalOpen(true);
-  };
+  const [users, setUsers] = useState([]);
+  const [children, setChildren] = useState([]);
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('Parent');
+  const [statusFilter, setStatusFilter] = useState('All Status');
+  const [page, setPage] = useState(1);
+  const [detailsUserId, setDetailsUserId] = useState(null);
+  const [deleteUserId, setDeleteUserId] = useState(null);
+  const [blockUserId, setBlockUserId] = useState(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
       setLoading(true);
       try {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        await new Promise((resolve) => setTimeout(resolve, 600));
 
-        setData({
-          dashStats: {
-            total: "1,247",
-            active: "1,089",
-            new: "87",
-            inactive: "158"
+        setUsers([
+          {
+            id: 1,
+            name: 'Sarah Martinez',
+            email: 'sarah.martinez@email.com',
+            phone: '+1 (555) 123-4567',
+            role: 'Parent',
+            status: 'Active',
+            blocked: false,
+            createdDate: 'Jan 15, 2025',
+            color: 'bg-[#06b6d4]',
           },
-          dashUsers: [
-            { id: 1, initials: 'SM', color: 'bg-[#06b6d4]', name: 'Sarah Martinez', email: 'sarah.martinez@email.com', phone: '+1 (555) 123-4567', role: 'Parent', roleColor: 'bg-[#cffafe] text-[#0891b2]', status: 'Active', children: 2, observations: 45, joinDate: 'Jan 15, 2025' },
-            { id: 2, initials: 'JD', color: 'bg-[#f97316]', name: 'John Davidson', email: 'john.davidson@email.com', phone: '+1 (555) 234-5678', role: 'Parent', roleColor: 'bg-[#cffafe] text-[#0891b2]', status: 'Active', children: 1, observations: 32, joinDate: 'Feb 3, 2025' },
-            { id: 3, initials: 'EC', color: 'bg-[#fca5a5]', name: 'Emily Chen', email: 'emily.chen@email.com', phone: '+1 (555) 345-6789', role: 'Caregiver', roleColor: 'bg-[#fef3c7] text-[#d97706]', status: 'Active', children: 5, observations: 128, joinDate: 'Dec 8, 2024' },
-            { id: 4, initials: 'MR', color: 'bg-[#a78bfa]', name: 'Michael Roberts', email: 'michael.roberts@email.com', phone: '+1 (555) 456-7890', role: 'Daycare Provider', roleColor: 'bg-[#ffe4e6] text-[#e11d48]', status: 'Active', children: 15, observations: 342, joinDate: 'Nov 22, 2024' },
-            { id: 5, initials: 'JL', color: 'bg-[#fbbf24]', name: 'Jennifer Lee', email: 'jennifer.lee@email.com', phone: '+1 (555) 567-8901', role: 'Parent', roleColor: 'bg-[#cffafe] text-[#0891b2]', status: 'Inactive', children: 1, observations: 12, joinDate: 'Oct 5, 2024' },
-            { id: 6, initials: 'DT', color: 'bg-[#15803d]', name: 'David Thompson', email: 'david.thompson@email.com', phone: '+1 (555) 678-9012', role: 'Family Member', roleColor: 'bg-[#d1fae5] text-[#059669]', status: 'Active', children: 2, observations: 18, joinDate: 'Mar 1, 2025' }
-          ]
-        });
+          {
+            id: 2,
+            name: 'John Davidson',
+            email: 'john.davidson@email.com',
+            phone: '+1 (555) 234-5678',
+            role: 'Parent',
+            status: 'Active',
+            blocked: true,
+            createdDate: 'Feb 3, 2025',
+            color: 'bg-[#f97316]',
+          },
+          {
+            id: 3,
+            name: 'Bright Start Daycare',
+            email: 'admin@brightstart.example',
+            phone: '+1 (555) 345-6789',
+            role: 'Daycare',
+            status: 'Active',
+            blocked: false,
+            createdDate: 'Dec 8, 2024',
+            color: 'bg-[#8b5cf6]',
+          },
+          {
+            id: 4,
+            name: 'Little Steps Center',
+            email: 'hello@littlesteps.example',
+            phone: '+1 (555) 456-7890',
+            role: 'Daycare',
+            status: 'Active',
+            blocked: true,
+            createdDate: 'Nov 22, 2024',
+            color: 'bg-[#14b8a6]',
+          },
+          {
+            id: 5,
+            name: 'Jennifer Lee',
+            email: 'jennifer.lee@email.com',
+            phone: '+1 (555) 567-8901',
+            role: 'Parent',
+            status: 'Active',
+            blocked: true,
+            createdDate: 'Oct 5, 2024',
+            color: 'bg-[#f59e0b]',
+          },
+        ]);
+
+        setChildren([
+          {
+            id: 101,
+            name: 'Mia Martinez',
+            dob: 'May 14, 2021',
+            age: '5',
+            gender: 'Female',
+            image: 'https://i.pravatar.cc/120?u=mia-martinez',
+            parentIds: [1],
+            daycareIds: [3],
+            relationship: 'Daughter',
+            development: 'Language growth on track; working on peer-led play routines.',
+            status: 'Active',
+          },
+          {
+            id: 102,
+            name: 'Leo Martinez',
+            dob: 'Aug 2, 2023',
+            age: '3',
+            gender: 'Male',
+            image: 'https://i.pravatar.cc/120?u=leo-martinez',
+            parentIds: [1],
+            daycareIds: [3, 4],
+            relationship: 'Son',
+            development: 'Gross motor milestones progressing; needs nap transition support.',
+            status: 'Active',
+          },
+          {
+            id: 103,
+            name: 'Ava Davidson',
+            dob: 'Jan 19, 2022',
+            age: '4',
+            gender: 'Female',
+            image: 'https://i.pravatar.cc/120?u=ava-davidson',
+            parentIds: [2],
+            daycareIds: [4],
+            relationship: 'Daughter',
+            development: 'Fine motor practice assigned; enjoys visual routines.',
+            status: 'Inactive',
+          },
+          {
+            id: 104,
+            name: 'Noah Lee',
+            dob: 'Mar 30, 2020',
+            age: '6',
+            gender: 'Male',
+            image: 'https://i.pravatar.cc/120?u=noah-lee',
+            parentIds: [5],
+            daycareIds: [3],
+            relationship: 'Son',
+            development: 'Ready for advanced social-emotional check-ins.',
+            status: 'Active',
+          },
+        ]);
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.error('Error fetching user data:', error);
       } finally {
         setLoading(false);
       }
@@ -77,21 +196,106 @@ const DaycareUserManagement = () => {
     fetchUserData();
   }, []);
 
-  // Filter and Search Logic
-  const dashFilteredUsers = useMemo(() => {
-    if (!data) return [];
-    return data.dashUsers.filter(user => {
-      const matchesRole = dashRole === 'All Roles' || user.role === dashRole;
-      const matchesStatus = dashStatus === 'All Status' || user.status === dashStatus;
-      const searchLower = dashSearch.toLowerCase();
+  const enrichedUsers = useMemo(
+    () =>
+      users.map((user) => ({
+        ...user,
+        initials: getInitials(user.name),
+        childIds: getChildIdsForUser(user, children),
+      })),
+    [users, children]
+  );
+
+  const filteredUsers = useMemo(() => {
+    const searchLower = search.toLowerCase();
+
+    return enrichedUsers.filter((user) => {
+      const accountState = user.blocked ? 'Blocked' : 'Active';
+      const matchesRole = user.role === roleFilter;
+      
+      let matchesStatus = true;
+      if (statusFilter === 'Active') {
+        matchesStatus = !user.blocked;
+      } else if (statusFilter === 'Blocked') {
+        matchesStatus = user.blocked;
+      }
+
       const matchesSearch =
         user.name.toLowerCase().includes(searchLower) ||
-        user.email.toLowerCase().includes(searchLower);
+        user.email.toLowerCase().includes(searchLower) ||
+        user.phone.toLowerCase().includes(searchLower) ||
+        user.role.toLowerCase().includes(searchLower) ||
+        accountState.toLowerCase().includes(searchLower);
+
       return matchesRole && matchesStatus && matchesSearch;
     });
-  }, [data, dashSearch, dashRole, dashStatus]);
+  }, [enrichedUsers, roleFilter, search, statusFilter]);
 
-  if (loading || !data) {
+  const sectionCounts = useMemo(
+    () =>
+      PROFILE_SECTIONS.reduce((counts, section) => {
+        counts[section.role] = users.filter((user) => user.role === section.role).length;
+        return counts;
+      }, {}),
+    [users]
+  );
+
+  const stats = useMemo(
+    () => ({
+      totalParents: users.filter((user) => user.role === 'Parent').length,
+      totalDaycares: users.filter((user) => user.role === 'Daycare').length,
+      activeCaregivers: users.filter((user) => user.role === 'Daycare' && !user.blocked).length,
+      blockedCaregivers: users.filter((user) => user.role === 'Daycare' && user.blocked).length,
+    }),
+    [users]
+  );
+
+  const itemsPerPage = 6;
+  const totalItems = filteredUsers.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const startIndex = (page - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentUsers = filteredUsers.slice(startIndex, endIndex);
+  const detailsUser = enrichedUsers.find((user) => user.id === detailsUserId);
+  const deleteUser = enrichedUsers.find((user) => user.id === deleteUserId);
+  const blockUser = enrichedUsers.find((user) => user.id === blockUserId);
+  const detailsChildren = detailsUser ? getChildrenForUser(detailsUser, children) : [];
+  const deleteChildren = deleteUser ? getChildrenForUser(deleteUser, children) : [];
+
+
+
+  const toggleBlocked = (userId) => {
+    setUsers((previousUsers) =>
+      previousUsers.map((user) =>
+        user.id === userId ? { ...user, blocked: !user.blocked } : user
+      )
+    );
+  };
+
+  const confirmDeleteUser = () => {
+    if (!deleteUser) return;
+
+    setUsers((previousUsers) => previousUsers.filter((user) => user.id !== deleteUser.id));
+    setChildren((previousChildren) =>
+      previousChildren.map((child) => ({
+        ...child,
+        parentIds:
+          deleteUser.role === 'Parent'
+            ? child.parentIds.filter((parentId) => parentId !== deleteUser.id)
+            : child.parentIds,
+        daycareIds:
+          deleteUser.role === 'Daycare'
+            ? child.daycareIds.filter((daycareId) => daycareId !== deleteUser.id)
+            : child.daycareIds,
+      }))
+    );
+    setDeleteUserId(null);
+    if (detailsUserId === deleteUser.id) {
+      setDetailsUserId(null);
+    }
+  };
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-gray-400">
@@ -102,366 +306,500 @@ const DaycareUserManagement = () => {
     );
   }
 
-  const dashItemsPerPage = 6;
-  const dashTotalItems = dashFilteredUsers.length;
-  const dashTotalPages = Math.ceil(dashTotalItems / dashItemsPerPage) || 1;
-  const dashStartIndex = (dashPage - 1) * dashItemsPerPage;
-  const dashEndIndex = dashStartIndex + dashItemsPerPage;
-  const currentDashUsers = dashFilteredUsers.slice(dashStartIndex, dashEndIndex);
-
   return (
     <div className="min-h-screen bg-[#f8fafc] p-6 lg:p-10 font-sans text-[#1e293b]">
       <div className="max-w-[1400px] mx-auto animate-in fade-in duration-500">
-
-        {/* Header Title */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-[#0f172a] mb-1">User Management</h1>
-          <p className="text-[13px] text-[#64748b]">Manage all platform users and their accounts</p>
+          <h1 className="text-2xl font-bold text-[#0f172a] mb-1">Admin Profile Management</h1>
+          <p className="text-[13px] text-[#64748b]">Manage parent and daycare profiles as separate sections. Children and admin records stay outside role assignment.</p>
         </div>
 
-        {/* 4 Stat Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl border border-gray-100 p-6 flex flex-col justify-between shadow-sm relative overflow-hidden">
-            <p className="text-[12px] font-medium text-[#64748b] mb-2">Total Users</p>
-            <h3 className="text-3xl font-bold text-[#0f172a] mb-4">{data.dashStats.total}</h3>
-            <div className="absolute bottom-0 left-6 right-6 h-1 bg-[#06b6d4]"></div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-100 p-6 flex flex-col justify-between shadow-sm relative overflow-hidden">
-            <p className="text-[12px] font-medium text-[#64748b] mb-2">Active Users</p>
-            <h3 className="text-3xl font-bold text-[#0f172a] mb-4">{data.dashStats.active}</h3>
-            <div className="absolute bottom-0 left-6 right-6 h-1 bg-[#10b981]"></div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-100 p-6 flex flex-col justify-between shadow-sm relative overflow-hidden">
-            <p className="text-[12px] font-medium text-[#64748b] mb-2">New This Month</p>
-            <h3 className="text-3xl font-bold text-[#0f172a] mb-4">{data.dashStats.new}</h3>
-            <div className="absolute bottom-0 left-6 right-6 h-1 bg-[#fbbf24]"></div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-100 p-6 flex flex-col justify-between shadow-sm relative overflow-hidden">
-            <p className="text-[12px] font-medium text-[#64748b] mb-2">Inactive</p>
-            <h3 className="text-3xl font-bold text-[#0f172a] mb-4">{data.dashStats.inactive}</h3>
-            <div className="absolute bottom-0 left-6 right-6 h-1 bg-[#94a3b8]"></div>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+          <StatCard label="Total Parents" value={stats.totalParents} accent="bg-[#06b6d4]" />
+          <StatCard label="Total Daycares" value={stats.totalDaycares} accent="bg-[#8b5cf6]" />
+          <StatCard label="Active Caregiver" value={stats.activeCaregivers} accent="bg-[#10b981]" />
+          <StatCard label="Blocked Caregivers" value={stats.blockedCaregivers} accent="bg-[#ef4444]" />
         </div>
 
-        {/* Filter Bar */}
-        <div className="bg-white rounded-xl border border-gray-100 p-4 mb-6 shadow-sm flex items-center justify-between gap-4">
-
+        <div className="bg-white rounded-xl border border-gray-100 p-4 mb-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8]" size={16} />
             <input
               type="text"
-              placeholder="Search by name, email, or phone..."
-              value={dashSearch}
-              onChange={(e) => {
-                setDashSearch(e.target.value);
-                setDashPage(1);
+              placeholder="Search by name, email, phone, role, or status..."
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
               }}
-              className="w-full pl-10 pr-4 py-2.5 bg-[#f8fafc] border border-gray-100 rounded-full text-[13px] focus:outline-none focus:ring-1 focus:ring-gray-200 transition-colors"
+              className="w-full pl-10 pr-4 py-2.5 bg-[#f8fafc] border border-gray-100 rounded-lg text-[13px] focus:outline-none focus:ring-1 focus:ring-gray-200 transition-colors"
             />
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <select
-                value={dashRole}
-                onChange={(e) => {
-                  setDashRole(e.target.value);
-                  setDashPage(1);
-                }}
-                className="pl-4 pr-10 py-2.5 bg-[#f8fafc] border border-gray-100 rounded-full text-[13px] font-medium text-[#475569] appearance-none focus:outline-none focus:ring-1 focus:ring-gray-200 cursor-pointer min-w-[140px]"
-              >
-                <option value="All Roles">All Roles</option>
-                <option value="Parent">Parent</option>
-                <option value="Caregiver">Caregiver</option>
-                <option value="Daycare Provider">Daycare Provider</option>
-                <option value="Family Member">Family Member</option>
-              </select>
-              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
-            </div>
-
-            <div className="relative">
-              <select
-                value={dashStatus}
-                onChange={(e) => {
-                  setDashStatus(e.target.value);
-                  setDashPage(1);
-                }}
-                className="pl-4 pr-10 py-2.5 bg-[#f8fafc] border border-gray-100 rounded-full text-[13px] font-medium text-[#475569] appearance-none focus:outline-none focus:ring-1 focus:ring-gray-200 cursor-pointer min-w-[140px]"
-              >
-                <option value="All Status">All Status</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
-            </div>
-
-            <button className="bg-[#06b6d4] hover:bg-[#0891b2] text-white px-6 py-2.5 rounded-full text-[13px] font-medium flex items-center gap-2 transition-colors">
-              <Filter size={14} />
-              Filter
-            </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <ProfileSectionTabs
+              selectedRole={roleFilter}
+              counts={sectionCounts}
+              onChange={(value) => {
+                setRoleFilter(value);
+                setPage(1);
+              }}
+            />
+            <SelectFilter
+              label="Status"
+              value={statusFilter}
+              onChange={(value) => {
+                setStatusFilter(value);
+                setPage(1);
+              }}
+              options={['All Status', 'Active', 'Blocked']}
+            />
           </div>
         </div>
 
-        {/* Table Area */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-
-          {/* Desktop Table Header */}
-          <div className="hidden lg:grid grid-cols-12 gap-4 p-4 border-b border-gray-100 bg-[#f8fafc] text-[10px] font-bold text-[#64748b] tracking-wider uppercase">
-            <div className="col-span-3 pl-2">USER</div>
-            <div className="col-span-3">CONTACT</div>
-            <div className="col-span-2">ROLE</div>
-            <div className="col-span-1">STATUS</div>
-            <div className="col-span-1">ACTIVITY</div>
-            <div className="col-span-1">JOIN DATE</div>
-            <div className="col-span-1 text-right pr-2">ACTIONS</div>
+          <div className="hidden xl:grid grid-cols-12 gap-4 p-4 border-b border-gray-100 bg-[#f8fafc] text-[10px] font-bold text-[#64748b] tracking-wider uppercase">
+            <div className="col-span-3 pl-2">{roleFilter} Profile</div>
+            <div className="col-span-3">Contact</div>
+            <div className="col-span-1">Role</div>
+            <div className="col-span-2">Account Status</div>
+            <div className="col-span-1">Children</div>
+            <div className="col-span-1">Created</div>
+            <div className="col-span-1 text-right pr-2">Actions</div>
           </div>
 
           <div className="divide-y divide-gray-100">
-            {currentDashUsers.length > 0 ? (
-              currentDashUsers.map((user) => (
-                <div key={user.id} className="flex flex-col lg:grid lg:grid-cols-12 gap-4 p-4 lg:items-center hover:bg-gray-50 transition-colors">
-
-                  {/* User Column */}
-                  <div className="w-full lg:col-span-3 flex items-center gap-3 lg:pl-2">
+            {currentUsers.length > 0 ? (
+              currentUsers.map((user) => (
+                <div key={user.id} className="flex flex-col xl:grid xl:grid-cols-12 gap-4 p-4 xl:items-center hover:bg-gray-50 transition-colors">
+                  <div className="w-full xl:col-span-3 flex items-center gap-3 xl:pl-2">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-[13px] shrink-0 ${user.color}`}>
                       {user.initials}
                     </div>
-                    <div>
-                      <h4 className="text-[14px] font-bold text-[#1e293b]">{user.name}</h4>
+                    <div className="min-w-0">
+                      <h4 className="text-[14px] font-bold text-[#1e293b] truncate">{user.name}</h4>
                       <p className="text-[12px] text-[#94a3b8]">ID: {user.id}</p>
                     </div>
                   </div>
 
-                  {/* Contact Column */}
-                  <div className="w-full lg:col-span-3 space-y-1">
-                    <span className="lg:hidden text-[10px] font-bold text-[#64748b] tracking-wider uppercase mb-1 block">Contact</span>
-                    <div className="flex items-center gap-2 text-[12px] text-[#475569]">
-                      <Mail size={12} className="text-[#94a3b8]" />
-                      <span className="truncate pr-4">{user.email}</span>
+                  <div className="w-full xl:col-span-3 space-y-1 min-w-0">
+                    <span className="xl:hidden text-[10px] font-bold text-[#64748b] tracking-wider uppercase mb-1 block">Contact</span>
+                    <div className="flex items-center gap-2 text-[12px] text-[#475569] min-w-0">
+                      <Mail size={12} className="text-[#94a3b8] shrink-0" />
+                      <span className="truncate">{user.email}</span>
                     </div>
                     <div className="flex items-center gap-2 text-[12px] text-[#475569]">
-                      <Phone size={12} className="text-[#94a3b8]" />
+                      <Phone size={12} className="text-[#94a3b8] shrink-0" />
                       {user.phone}
                     </div>
                   </div>
 
-                  {/* Role Column */}
-                  <div className="w-full lg:col-span-2 flex justify-between lg:justify-start items-center">
-                    <span className="lg:hidden text-[10px] font-bold text-[#64748b] tracking-wider uppercase">Role</span>
-                    <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${user.roleColor}`}>
-                      {user.role}
-                    </span>
+                  <div className="w-full xl:col-span-1 flex justify-between xl:justify-start items-center">
+                    <span className="xl:hidden text-[10px] font-bold text-[#64748b] tracking-wider uppercase">Role</span>
+                    <RoleBadge role={user.role} />
                   </div>
 
-                  {/* Status Column */}
-                  <div className="w-full lg:col-span-1 flex justify-between lg:justify-start items-center">
-                    <span className="lg:hidden text-[10px] font-bold text-[#64748b] tracking-wider uppercase">Status</span>
-                    {user.status === 'Active' ? (
-                      <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#10b981]">
-                        <UserCheck size={14} /> Active
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#64748b]">
-                        <UserX size={14} /> Inactive
-                      </div>
-                    )}
+                  <div className="w-full xl:col-span-2 flex justify-between xl:justify-start items-center">
+                    <span className="xl:hidden text-[10px] font-bold text-[#64748b] tracking-wider uppercase">Status</span>
+                    <StatusBadge user={user} />
                   </div>
 
-                  {/* Activity Column */}
-                  <div className="w-full lg:col-span-1 flex justify-between lg:block items-center">
-                    <span className="lg:hidden text-[10px] font-bold text-[#64748b] tracking-wider uppercase">Activity</span>
-                    <div className="text-right lg:text-left">
-                      <div className="text-[12px] text-[#1e293b]">{user.children} Children</div>
-                      <div className="text-[11px] text-[#94a3b8]">{user.observations} Obsv.</div>
-                    </div>
+                  <div className="w-full xl:col-span-1 flex justify-between xl:block items-center">
+                    <span className="xl:hidden text-[10px] font-bold text-[#64748b] tracking-wider uppercase">Children</span>
+                    <span className="text-[12px] font-medium text-[#1e293b]">{user.childIds.length}</span>
                   </div>
 
-                  {/* Join Date Column */}
-                  <div className="w-full lg:col-span-1 flex justify-between lg:justify-start items-center">
-                    <span className="lg:hidden text-[10px] font-bold text-[#64748b] tracking-wider uppercase">Join Date</span>
+                  <div className="w-full xl:col-span-1 flex justify-between xl:justify-start items-center">
+                    <span className="xl:hidden text-[10px] font-bold text-[#64748b] tracking-wider uppercase">Created</span>
                     <div className="flex items-center gap-2 text-[12px] text-[#475569]">
                       <Calendar size={12} className="text-[#94a3b8]" />
-                      {user.joinDate}
+                      {user.createdDate}
                     </div>
                   </div>
 
-                  {/* Actions Column */}
-                  <div className="w-full lg:col-span-1 flex items-center justify-end gap-4 lg:pr-2 text-[#94a3b8] pt-3 lg:pt-0 border-t border-gray-100 lg:border-0 mt-1 lg:mt-0">
-                    <button onClick={() => handleEditClick(user)} className="hover:text-[#06b6d4] transition-colors flex items-center gap-1 lg:block">
-                      <Edit size={16} />
-                      <span className="lg:hidden text-[11px] font-medium">Edit</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setUserToDelete(user);
-                        setDeleteModalOpen(true);
-                      }}
-                      className="hover:text-[#1e293b] transition-colors flex items-center gap-1 lg:block"
-                    >
-                      <MoreVertical size={16} />
-                      <span className="lg:hidden text-[11px] font-medium">More</span>
-                    </button>
+                  <div className="w-full xl:col-span-1 flex flex-row items-center xl:justify-end gap-2 xl:pr-2 pt-3 xl:pt-0 border-t border-gray-100 xl:border-0 mt-1 xl:mt-0">
+                    <ActionButton label="Details" tone="neutral" onClick={() => setDetailsUserId(user.id)} icon={Eye} />
+                    <ActionButton
+                      label={user.blocked ? 'Unblock' : 'Block'}
+                      tone={user.blocked ? 'success' : 'warning'}
+                      onClick={() => setBlockUserId(user.id)}
+                      icon={user.blocked ? ShieldCheck : Ban}
+                    />
+                    <ActionButton label="Delete" tone="danger" onClick={() => setDeleteUserId(user.id)} icon={Trash2} />
                   </div>
-
                 </div>
               ))
             ) : (
               <div className="py-8 text-center text-[13px] font-medium text-[#64748b]">
-                No users found matching your search and filter criteria.
+                No {roleFilter.toLowerCase()} profiles found matching your search and filter criteria.
               </div>
             )}
           </div>
 
-          {/* Pagination Footer */}
           <div className="p-4 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
             <span className="text-[12px] text-[#64748b] text-center md:text-left">
-              Showing {dashTotalItems > 0 ? dashStartIndex + 1 : 0} to {Math.min(dashEndIndex, dashTotalItems)} of {dashTotalItems} users
+              Showing {totalItems > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, totalItems)} of {totalItems} {roleFilter.toLowerCase()} profiles
             </span>
             <div className="flex flex-wrap justify-center gap-1.5">
               <button
-                onClick={() => setDashPage(prev => Math.max(prev - 1, 1))}
-                disabled={dashPage === 1}
+                onClick={() => setPage((previousPage) => Math.max(previousPage - 1, 1))}
+                disabled={page === 1}
                 className="w-8 h-8 flex items-center justify-center bg-white text-[#64748b] hover:bg-[#f1f5f9] transition-colors text-[13px] font-bold disabled:opacity-50 disabled:cursor-not-allowed border border-[#e2e8f0] rounded-lg shrink-0"
               >
                 &lt;
               </button>
 
-              {Array.from({ length: dashTotalPages }, (_, i) => i + 1).map((page) => (
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
                 <button
-                  key={page}
-                  onClick={() => setDashPage(page)}
-                  className={`w-8 h-8 flex items-center justify-center transition-colors text-[13px] font-bold rounded-lg border shrink-0 ${dashPage === page
-                    ? 'bg-[#06b6d4] text-white border-[#06b6d4] shadow-sm'
-                    : 'bg-white text-[#64748b] hover:bg-[#f1f5f9] border-[#e2e8f0]'
-                    }`}
+                  key={pageNumber}
+                  onClick={() => setPage(pageNumber)}
+                  className={`w-8 h-8 flex items-center justify-center transition-colors text-[13px] font-bold rounded-lg border shrink-0 ${
+                    page === pageNumber
+                      ? 'bg-[#06b6d4] text-white border-[#06b6d4] shadow-sm'
+                      : 'bg-white text-[#64748b] hover:bg-[#f1f5f9] border-[#e2e8f0]'
+                  }`}
                 >
-                  {page}
+                  {pageNumber}
                 </button>
               ))}
 
               <button
-                onClick={() => setDashPage(prev => Math.min(prev + 1, dashTotalPages))}
-                disabled={dashPage === dashTotalPages || dashTotalPages === 0}
+                onClick={() => setPage((previousPage) => Math.min(previousPage + 1, totalPages))}
+                disabled={page === totalPages || totalPages === 0}
                 className="w-8 h-8 flex items-center justify-center bg-white text-[#64748b] hover:bg-[#f1f5f9] transition-colors text-[13px] font-bold disabled:opacity-50 disabled:cursor-not-allowed border border-[#e2e8f0] rounded-lg shrink-0"
               >
                 &gt;
               </button>
             </div>
           </div>
-
         </div>
       </div>
 
-      {/* Edit Modal */}
-      {isEditModalOpen && editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-[#0f172a]">Edit User</h2>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-[13px] font-medium text-[#475569] mb-1">Name</label>
-                <input type="text" defaultValue={editingUser.name} className="w-full px-3 py-2 bg-[#f8fafc] border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/20 focus:border-[#06b6d4]" />
-              </div>
-              <div>
-                <label className="block text-[13px] font-medium text-[#475569] mb-1">Email</label>
-                <input type="email" defaultValue={editingUser.email} className="w-full px-3 py-2 bg-[#f8fafc] border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/20 focus:border-[#06b6d4]" />
-              </div>
-              <div>
-                <label className="block text-[13px] font-medium text-[#475569] mb-1">Phone</label>
-                <input type="text" defaultValue={editingUser.phone} className="w-full px-3 py-2 bg-[#f8fafc] border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/20 focus:border-[#06b6d4]" />
-              </div>
-              <div>
-                <label className="block text-[13px] font-medium text-[#475569] mb-1">Role</label>
-                <select defaultValue={editingUser.role} className="w-full px-3 py-2 bg-[#f8fafc] border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/20 focus:border-[#06b6d4]">
-                  <option value="Parent">Parent</option>
-                  <option value="Caregiver">Caregiver</option>
-                  <option value="Daycare Provider">Daycare Provider</option>
-                  <option value="Family Member">Family Member</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[13px] font-medium text-[#475569] mb-1">Status</label>
-                <select defaultValue={editingUser.status} className="w-full px-3 py-2 bg-[#f8fafc] border border-gray-200 rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/20 focus:border-[#06b6d4]">
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </div>
-            </div>
-            <div className="p-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50">
-              <button onClick={() => setIsEditModalOpen(false)} className="px-4 py-2 text-[13px] font-medium text-[#475569] hover:text-[#1e293b] transition-colors">Cancel</button>
-              <button onClick={() => setIsEditModalOpen(false)} className="px-4 py-2 text-[13px] font-medium text-white bg-[#06b6d4] hover:bg-[#0891b2] rounded-lg transition-colors">Save Changes</button>
-            </div>
-          </div>
-        </div>
+      {detailsUser && (
+        <DetailsModal
+          user={detailsUser}
+          children={detailsChildren}
+          onClose={() => setDetailsUserId(null)}
+          onBlockClick={(id) => setBlockUserId(id)}
+        />
       )}
 
-      {/* Delete Confirmation Modal */}
-      {deleteModalOpen && userToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl animate-in zoom-in-95 duration-200 border border-[#e2e8f0]">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-6">
-                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-500">
-                  <AlertTriangle size={24} strokeWidth={2} />
-                </div>
-                <button
-                  onClick={() => {
-                    setDeleteModalOpen(false);
-                    setUserToDelete(null);
-                  }}
-                  className="text-[#94a3b8] hover:text-[#0f172a] transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
+      {deleteUser && (
+        <DeleteModal
+          user={deleteUser}
+          children={deleteChildren}
+          onClose={() => setDeleteUserId(null)}
+          onConfirm={confirmDeleteUser}
+        />
+      )}
 
-              <h2 className="text-xl font-bold text-[#0f172a] mb-2">Delete User Profile?</h2>
-              <p className="text-[#64748b] text-[14px] leading-relaxed mb-6">
-                Are you sure you want to delete <strong className="text-[#0f172a]">{userToDelete.name}</strong> from the system? This action cannot be undone and will revoke all access.
-              </p>
-
-              <div className="bg-[#f8fafc] p-4 rounded-xl border border-[#e2e8f0] mb-8 flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-[14px] shadow-sm ${userToDelete.color}`}>
-                  {userToDelete.initials}
-                </div>
-                <div>
-                  <h3 className="text-[14px] font-bold text-[#0f172a]">{userToDelete.name}</h3>
-                  <p className="text-[12px] text-[#64748b]">Role: {userToDelete.role}</p>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setDeleteModalOpen(false);
-                    setUserToDelete(null);
-                  }}
-                  className="px-5 py-2.5 text-[13px] font-semibold text-[#64748b] hover:text-[#0f172a] hover:bg-[#f8fafc] border border-transparent hover:border-[#e2e8f0] rounded-xl transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeleteConfirm}
-                  className="px-5 py-2.5 text-[13px] font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-sm"
-                >
-                  Delete User
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {blockUser && (
+        <BlockModal
+          user={blockUser}
+          onClose={() => setBlockUserId(null)}
+          onConfirm={() => {
+            toggleBlocked(blockUser.id);
+            setBlockUserId(null);
+          }}
+        />
       )}
     </div>
   );
 };
 
-export default DaycareUserManagement;
+const StatCard = ({ label, value, accent }) => (
+  <div className="bg-white rounded-xl border border-gray-100 p-6 flex flex-col justify-between shadow-sm relative overflow-hidden">
+    <p className="text-[12px] font-medium text-[#64748b] mb-2">{label}</p>
+    <h3 className="text-3xl font-bold text-[#0f172a] mb-4">{value.toLocaleString()}</h3>
+    <div className={`absolute bottom-0 left-6 right-6 h-1 ${accent}`} />
+  </div>
+);
 
+const SelectFilter = ({ label, value, onChange, options }) => (
+  <div className="relative min-w-[150px]">
+    <select
+      aria-label={label}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className="w-full pl-4 pr-10 py-2.5 bg-[#f8fafc] border border-gray-100 rounded-lg text-[13px] font-medium text-[#475569] appearance-none focus:outline-none focus:ring-1 focus:ring-gray-200 cursor-pointer"
+    >
+      {options.map((option) => (
+        <option key={option} value={option}>
+          {option}
+        </option>
+      ))}
+    </select>
+    <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+  </div>
+);
+
+const ProfileSectionTabs = ({ selectedRole, counts, onChange }) => (
+  <div className="flex bg-[#f8fafc] border border-gray-100 rounded-lg p-1 gap-1">
+    {PROFILE_SECTIONS.map((section) => {
+      const isSelected = selectedRole === section.role;
+
+      return (
+        <button
+          key={section.role}
+          type="button"
+          onClick={() => onChange(section.role)}
+          className={`px-3 py-2 rounded-md text-[12px] font-semibold transition-colors whitespace-nowrap ${
+            isSelected
+              ? 'bg-white text-[#0f172a] shadow-sm border border-[#e2e8f0]'
+              : 'text-[#64748b] hover:text-[#0f172a]'
+          }`}
+        >
+          {section.label}
+          <span className="ml-2 text-[11px] text-[#94a3b8]">{counts[section.role] || 0}</span>
+        </button>
+      );
+    })}
+  </div>
+);
+
+const RoleBadge = ({ role }) => (
+  <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${ROLE_STYLES[role]}`}>
+    {role}
+  </span>
+);
+
+const StatusBadge = ({ user }) => (
+  <div className="flex flex-wrap items-center gap-2">
+    {user.blocked ? (
+      <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full border border-[#fecaca] bg-[#fef2f2] text-[#dc2626]">
+        Blocked
+      </span>
+    ) : (
+      <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full border border-[#a7f3d0] bg-[#ecfdf5] text-[#10b981]">
+        Active
+      </span>
+    )}
+  </div>
+);
+
+const ActionButton = ({ label, tone, onClick, icon }) => {
+  const toneClasses = {
+    neutral: 'text-[#475569] hover:text-[#06b6d4] hover:border-[#bae6fd] hover:bg-[#e0f2fe]/40',
+    success: 'text-[#047857] hover:text-[#065f46] hover:border-[#a7f3d0] hover:bg-[#ecfdf5]/40',
+    warning: 'text-[#b45309] hover:text-[#92400e] hover:border-[#fde68a] hover:bg-[#fffbeb]/40',
+    danger: 'text-[#dc2626] hover:text-[#b91c1c] hover:border-[#fecaca] hover:bg-[#fef2f2]/40',
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      className={`inline-flex items-center justify-center p-2 rounded-lg border border-transparent bg-white transition-colors duration-200 ${toneClasses[tone]}`}
+    >
+      {React.createElement(icon, { size: 16 })}
+    </button>
+  );
+};
+
+const DetailsModal = ({ user, children, onClose, onBlockClick }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div className="bg-white w-full max-w-5xl max-h-[92vh] overflow-hidden rounded-xl shadow-xl animate-in zoom-in-95 duration-200 border border-[#e2e8f0]">
+      <div className="p-5 border-b border-gray-100 flex items-start justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-[14px] shrink-0 ${user.color}`}>
+            {user.initials}
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold text-[#0f172a] truncate">{user.name}</h2>
+            <p className="text-[13px] text-[#64748b] truncate">{user.email}</p>
+          </div>
+        </div>
+        <button onClick={onClose} className="text-[#94a3b8] hover:text-[#0f172a] transition-colors">
+          <X size={20} />
+        </button>
+      </div>
+
+      <div className="p-5 overflow-y-auto max-h-[calc(92vh-86px)]">
+        <div className="grid grid-cols-1 gap-4 mb-6">
+          <DetailItem label="Full Name" value={user.name} />
+          <DetailItem label="Email" value={user.email} />
+          <DetailItem label="Role" value={<RoleBadge role={user.role} />} />
+          <DetailItem label="Account Status" value={<StatusBadge user={user} />} />
+          <DetailItem label="Created Date" value={user.createdDate} />
+          <DetailItem label="Children Associated" value={children.length.toString()} />
+        </div>
+
+        <div className="flex flex-row items-center gap-2 mb-6">
+          <ActionButton
+            label={user.blocked ? 'Unblock' : 'Block'}
+            tone={user.blocked ? 'success' : 'warning'}
+            onClick={() => {
+              onClose();
+              onBlockClick(user.id);
+            }}
+            icon={user.blocked ? ShieldCheck : Ban}
+          />
+        </div>
+
+        <div className="border-t border-gray-100 pt-5">
+          <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#64748b] mb-4">Associated Children</h3>
+          {children.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {children.map((child) => (
+                <ChildCard key={child.id} child={child} user={user} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-[#cbd5e1] p-6 text-center text-[13px] text-[#64748b]">
+              No children are currently associated with this {user.role.toLowerCase()} user.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const DetailItem = ({ label, value }) => (
+  <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-4">
+    <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748b] mb-2">{label}</p>
+    <div className="text-[13px] font-semibold text-[#0f172a] break-words">{value}</div>
+  </div>
+);
+
+const ChildCard = ({ child, user }) => {
+  const association =
+    user.role === 'Parent'
+      ? child.relationship
+      : `Enrolled at ${user.name}`;
+
+  return (
+    <div className="rounded-xl border border-[#e2e8f0] bg-white p-4 flex gap-4">
+      <img
+        src={child.image}
+        alt={child.name}
+        className="w-16 h-16 rounded-xl object-cover shrink-0 bg-[#f1f5f9]"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <h4 className="text-[14px] font-bold text-[#0f172a]">{child.name}</h4>
+          <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${STATUS_STYLES[child.status]}`}>
+            {child.status}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-[12px] text-[#475569] mb-3">
+          <p><span className="font-semibold text-[#0f172a]">Age:</span> {child.age}</p>
+          <p><span className="font-semibold text-[#0f172a]">DOB:</span> {child.dob}</p>
+          <p><span className="font-semibold text-[#0f172a]">Gender:</span> {child.gender}</p>
+          <p><span className="font-semibold text-[#0f172a]">Association:</span> {association}</p>
+        </div>
+        <p className="text-[12px] leading-relaxed text-[#64748b]">{child.development}</p>
+      </div>
+    </div>
+  );
+};
+
+const DeleteModal = ({ user, children, onClose, onConfirm }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div className="bg-white w-full max-w-lg rounded-xl shadow-xl animate-in zoom-in-95 duration-200 border border-[#e2e8f0]">
+      <div className="p-6">
+        <div className="flex justify-between items-start mb-6">
+          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-500">
+            <AlertTriangle size={24} strokeWidth={2} />
+          </div>
+          <button onClick={onClose} className="text-[#94a3b8] hover:text-[#0f172a] transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <h2 className="text-xl font-bold text-[#0f172a] mb-2">Delete User?</h2>
+        <p className="text-[#64748b] text-[14px] leading-relaxed mb-5">
+          This may permanently remove <strong className="text-[#0f172a]">{user.name}</strong> from the platform and revoke their access.
+        </p>
+
+        <div className="rounded-xl border border-[#fee2e2] bg-[#fef2f2] p-4 mb-5 text-[13px] text-[#991b1b] leading-relaxed">
+          Associated children will not be deleted here. This action only removes this user's relationship from each child record, so children connected to another parent or daycare remain safely available.
+        </div>
+
+        <div className="bg-[#f8fafc] p-4 rounded-xl border border-[#e2e8f0] mb-8">
+          <div className="flex items-center gap-4 mb-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-[14px] shadow-sm ${user.color}`}>
+              {user.initials}
+            </div>
+            <div>
+              <h3 className="text-[14px] font-bold text-[#0f172a]">{user.name}</h3>
+              <p className="text-[12px] text-[#64748b]">Role: {user.role}</p>
+            </div>
+          </div>
+          <p className="text-[12px] text-[#64748b]">
+            Relationships affected: {children.length} child{children.length === 1 ? '' : 'ren'}
+          </p>
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 text-[13px] font-semibold text-[#64748b] hover:text-[#0f172a] hover:bg-[#f8fafc] border border-transparent hover:border-[#e2e8f0] rounded-xl transition-all"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-5 py-2.5 text-[13px] font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-sm"
+          >
+            Delete User
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const BlockModal = ({ user, onClose, onConfirm }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div className="bg-white w-full max-w-lg rounded-xl shadow-xl animate-in zoom-in-95 duration-200 border border-[#e2e8f0]">
+      <div className="p-6">
+        <div className="flex justify-between items-start mb-6">
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${user.blocked ? 'bg-emerald-100 text-emerald-500' : 'bg-amber-100 text-amber-500'}`}>
+            {user.blocked ? <ShieldCheck size={24} strokeWidth={2} /> : <Ban size={24} strokeWidth={2} />}
+          </div>
+          <button onClick={onClose} className="text-[#94a3b8] hover:text-[#0f172a] transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <h2 className="text-xl font-bold text-[#0f172a] mb-2">{user.blocked ? 'Unblock User?' : 'Block User?'}</h2>
+        <p className="text-[#64748b] text-[14px] leading-relaxed mb-5">
+          Are you sure you want to {user.blocked ? 'unblock' : 'block'} <strong className="text-[#0f172a]">{user.name}</strong>? 
+          {user.blocked 
+            ? ' This will restore their active status and access to the system.' 
+            : ' This will suspend their access and render them inactive.'}
+        </p>
+
+        <div className="bg-[#f8fafc] p-4 rounded-xl border border-[#e2e8f0] mb-8">
+          <div className="flex items-center gap-4">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-[14px] shadow-sm ${user.color}`}>
+              {user.initials}
+            </div>
+            <div>
+              <h3 className="text-[14px] font-bold text-[#0f172a]">{user.name}</h3>
+              <p className="text-[12px] text-[#64748b]">Role: {user.role}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 text-[13px] font-semibold text-[#64748b] hover:text-[#0f172a] hover:bg-[#f8fafc] border border-transparent hover:border-[#e2e8f0] rounded-xl transition-all"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className={`px-5 py-2.5 text-[13px] font-semibold text-white rounded-xl transition-colors shadow-sm ${user.blocked ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-amber-500 hover:bg-amber-600'}`}
+          >
+            {user.blocked ? 'Unblock User' : 'Block User'}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+export default DaycareUserManagement;

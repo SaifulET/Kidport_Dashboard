@@ -5,8 +5,8 @@ import {
   Users,
   Smile,
   Brain,
-  BarChart2,
   Settings,
+  MessageSquare,
   LogOut
 } from "lucide-react";
 
@@ -16,16 +16,17 @@ const ParentSidebar = ({ closeDrawer }) => {
 
   const handleLogout = () => {
     localStorage.removeItem('user');
+    localStorage.removeItem('role');
     navigate('/sign-in');
   };
 
   const menuItems = [
     { icon: LayoutGrid, label: "Dashboard", Link: "/" },
-    { icon: Users, label: "Users", Link: "/user-management" },
+    { icon: Users, label: "Caregivers", Link: "/user-management" },
     { icon: Smile, label: "Children", Link: "/children" },
     { icon: Brain, label: "AI Monitoring", Link: "/ai-monitoring" },
-    { icon: BarChart2, label: "Reports", Link: "/reports" },
     { icon: Settings, label: "Settings", Link: "/settings" },
+    { icon: MessageSquare, label: "Support", Link: "/support" },
   ];
 
   return (
@@ -42,7 +43,7 @@ const ParentSidebar = ({ closeDrawer }) => {
           <span className="text-xl font-bold text-[#1eb4cd] tracking-tight">KIDPort</span>
         </div>
         <p className="text-[9px] text-[#64748b] tracking-[0.15em] uppercase pl-1">
-          Admin Terminal
+          Parent Section
         </p>
       </div>
 
@@ -83,7 +84,7 @@ const ParentSidebar = ({ closeDrawer }) => {
             <div className="w-9 h-9 bg-[#00a99d] rounded-full flex items-center justify-center text-white font-bold text-xs">AD</div>
             <div className="flex flex-col">
               <span className="text-[10px] font-bold text-[#1e293b] uppercase tracking-wide leading-tight">
-                KIDPORT ADMIN
+                Parent Profile
               </span>
               <span className="text-[9px] text-[#64748b] italic mt-0.5">
                 v2.4.0-stable

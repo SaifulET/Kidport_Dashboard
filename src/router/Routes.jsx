@@ -19,10 +19,10 @@ import SubscriptionManagement from "../Pages/SubscriptionManagement/Subscription
 import Settings from "../Pages/Settings/Settings";
 import ChildrenPage from "../Pages/Children/Children";
 import AIMonitoringPage from "../Pages/AIMonitoring/AIMonitoring";
-import ReportsPage from "../Pages/Reports/Reports";
 import ObservationsPage from "../Pages/Observations/Observations";
 import ParentNotifications from "../Pages/Notifications/ParentNotifications";
 import DaycareNotifications from "../Pages/Notifications/DaycareNotifications";
+import SupportPage from "../Pages/Support/Support";
 
 export const router = createBrowserRouter([
   {
@@ -53,7 +53,6 @@ export const router = createBrowserRouter([
           { path: "/children", element: <ChildrenPage /> },
           { path: "/observations", element: <ObservationsPage /> },
           { path: "/ai-monitoring", element: <AIMonitoringPage /> },
-          { path: "/reports", element: <ReportsPage /> },
           { path: "/protocol-manager", element: <ProtocolManager /> },
           { path: "/user-management", element: <UserManagement /> },
           { path: "/user-management/:id", element: <UserDetails /> },
@@ -65,6 +64,7 @@ export const router = createBrowserRouter([
           { path: "/upload-video", element: <UploadVideo /> },
           { path: "/subscription", element: <SubscriptionManagement /> },
           { path: "/settings", element: <Settings /> },
+          { path: "/support", element: <SupportPage /> },
           { path: "/notifications", element: <ParentNotifications /> },
           { path: "/daycare-notifications", element: <DaycareNotifications /> },
         ],

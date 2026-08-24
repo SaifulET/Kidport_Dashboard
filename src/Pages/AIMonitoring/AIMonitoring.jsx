@@ -1,11 +1,10 @@
 import React from 'react';
 import ParentAIMonitoring from './ParentAIMonitoring';
 import DaycareAIMonitoring from './DaycareAIMonitoring';
+import { isParentRole } from '../../utils/roles';
 
 export default function AIMonitoringPage() {
-  const role = localStorage.getItem("role") || "terminal";
-
-  if (role === "terminal") {
+  if (isParentRole()) {
     return <ParentAIMonitoring />;
   }
 

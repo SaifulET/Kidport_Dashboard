@@ -1,11 +1,10 @@
 import React from "react";
 import ParentSidebar from "./ParentSidebar";
 import DaycareSidebar from "./DaycareSidebar";
+import { isParentRole } from "../../utils/roles";
 
 const Sidebar = ({ closeDrawer }) => {
-  const role = localStorage.getItem("role") || "terminal";
-
-  if (role === "terminal") {
+  if (isParentRole()) {
     return <ParentSidebar closeDrawer={closeDrawer} />;
   }
 

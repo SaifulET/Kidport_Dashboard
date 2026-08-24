@@ -25,8 +25,8 @@ const UserDetails = () => {
 
   const renderProfileTab = () => (
     <div className="space-y-12 duration-500 animate-in fade-in">
-      {/* Row 1 & 2 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-12">
+      {/* Rowwise user details */}
+      <div className="grid grid-cols-1 gap-y-12">
         <div className="pb-4 border-b border-[#525252] dark:border-gray-800 transition-colors">
           <p className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-3">Email</p>
           <p className="text-[15px] font-medium text-[#1A1A4B] dark:text-white transition-colors">{user.email}</p>
@@ -43,16 +43,10 @@ const UserDetails = () => {
           <p className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-3">Age</p>
           <p className="text-[15px] font-medium text-[#1A1A4B] dark:text-white transition-colors">{user.age}</p>
         </div>
-      </div>
-
-      {/* Row 3 - Full Width Address */}
-      <div className="pb-4 border-b border-[#525252] dark:border-gray-800 transition-colors">
-        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-3">Address</p>
-        <p className="text-[15px] font-medium text-[#1A1A4B] dark:text-white transition-colors">{user.address}</p>
-      </div>
-
-      {/* Row 4 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-12">
+        <div className="pb-4 border-b border-[#525252] dark:border-gray-800 transition-colors">
+          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-3">Address</p>
+          <p className="text-[15px] font-medium text-[#1A1A4B] dark:text-white transition-colors">{user.address}</p>
+        </div>
         <div className="pb-4 border-b border-[#525252] dark:border-gray-800 transition-colors">
           <p className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-3">Joining Date</p>
           <p className="text-[15px] font-medium text-[#1A1A4B] dark:text-white transition-colors">{user.joiningDate}</p>
@@ -61,12 +55,10 @@ const UserDetails = () => {
           <p className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-3">Deletion (30 days timeline)</p>
           <p className="text-[15px] font-bold text-red-500">{user.deletion}</p>
         </div>
-      </div>
-
-      {/* Row 5 - Bio */}
-      <div className="pb-4 border-b border-[#525252] dark:border-gray-800 transition-colors">
-        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-3">Bio</p>
-        <p className="text-[14px] leading-relaxed text-[#1A1A4B] dark:text-gray-300 font-medium transition-colors">{user.bio}</p>
+        <div className="pb-4 border-b border-[#525252] dark:border-gray-800 transition-colors">
+          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-3">Bio</p>
+          <p className="text-[14px] leading-relaxed text-[#1A1A4B] dark:text-gray-300 font-medium transition-colors">{user.bio}</p>
+        </div>
       </div>
 
       {/* Documents Section */}

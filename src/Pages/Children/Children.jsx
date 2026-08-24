@@ -1,11 +1,10 @@
 import React from 'react';
 import ParentChildren from './ParentChildren';
 import DaycareChildren from './DaycareChildren';
+import { isParentRole } from '../../utils/roles';
 
 export default function ChildrenPage() {
-  const role = localStorage.getItem("role") || "terminal";
-
-  if (role === "terminal") {
+  if (isParentRole()) {
     return <ParentChildren />;
   }
 

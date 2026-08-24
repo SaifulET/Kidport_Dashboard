@@ -1,11 +1,10 @@
 import React from "react";
 import ParentHeader from "./ParentHeader";
 import DaycareHeader from "./DaycareHeader";
+import { isParentRole } from "../../utils/roles";
 
 const Header = ({ showDrawer }) => {
-  const role = localStorage.getItem("role") || "terminal";
-
-  if (role === "terminal") {
+  if (isParentRole()) {
     return <ParentHeader showDrawer={showDrawer} />;
   }
 

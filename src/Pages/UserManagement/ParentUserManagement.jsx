@@ -7,13 +7,17 @@ const ParentUserManagement = () => {
   
   // Search, Filter, and Pagination State (Terminal)
   const [globalSearch, setGlobalSearch] = useState('');
-  const [selectedRole, setSelectedRole] = useState('All Roles');
+  const [selectedRole, setSelectedRole] = useState('All Profiles');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
 
   // View Modal State
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewingUser, setViewingUser] = useState(null);
+
+  // Status Confirmation State
+  const [statusConfirmUserId, setStatusConfirmUserId] = useState(null);
+  const statusConfirmUser = data?.users.find(u => u.id === statusConfirmUserId);
 
   // Create Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -89,18 +93,17 @@ const ParentUserManagement = () => {
           growthPct: '+12%',
           users: [
             { id: 1, initials: 'JA', name: 'Julianna Abrams', email: 'j.abrams@example.com', role: 'PARENT', status: 'ACTIVE' },
-            { id: 2, initials: 'MT', name: 'Marcus Thorne', email: 'm.thorne@careset.io', role: 'PROVIDER', status: 'SUSPENDED' },
-            { id: 3, initials: 'SL', name: 'Sarah Lin', email: 'lin.sarah@gmail.com', role: 'SITTER', status: 'ACTIVE' },
-            { id: 4, initials: 'WK', name: 'William Kessler', email: 'w.kessler@family.org', role: 'FAMILY', status: 'ACTIVE' }
+            { id: 2, initials: 'BT', name: 'Bright Tree Daycare', email: 'hello@brighttree.example', role: 'DAYCARE', status: 'SUSPENDED' },
+            { id: 3, initials: 'SL', name: 'Sarah Lin', email: 'lin.sarah@gmail.com', role: 'PARENT', status: 'ACTIVE' },
+            { id: 4, initials: 'LS', name: 'Little Steps Center', email: 'admin@littlesteps.example', role: 'DAYCARE', status: 'ACTIVE' }
           ],
           rolesDistribution: [
-            { label: 'Parents', percentage: 40 },
-            { label: 'Sitters', percentage: 30 },
-            { label: 'Providers', percentage: 25 }
+            { label: 'Parents', percentage: 70 },
+            { label: 'Daycare', percentage: 30 }
           ],
           auditLogs: [
             { time: '12:44 PM', text: <>User <span className="font-bold">j.abrams</span> updated profile security settings</> },
-            { time: '11:02 AM', text: <>New registration: <span className="font-bold">linda.v@care.com</span> (Provider)</> }
+            { time: '11:02 AM', text: <>New registration: <span className="font-bold">linda.v@care.com</span> (Daycare)</> }
           ],
         });
       } catch (error) {
@@ -117,7 +120,7 @@ const ParentUserManagement = () => {
   const filteredUsers = useMemo(() => {
     if (!data) return [];
     return data.users.filter(user => {
-      const matchesRole = selectedRole === 'All Roles' || user.role.toLowerCase() === selectedRole.toLowerCase();
+      const matchesRole = selectedRole === 'All Profiles' || user.role.toLowerCase() === selectedRole.toLowerCase();
       const searchLower = globalSearch.toLowerCase();
       const matchesSearch = 
         user.name.toLowerCase().includes(searchLower) || 
@@ -189,11 +192,9 @@ const ParentUserManagement = () => {
                   onChange={(e) => setSelectedRole(e.target.value)}
                   className="w-full px-4 py-2.5 bg-white border border-[#e2e8f0] rounded-lg text-[13px] text-[#1e293b] appearance-none focus:outline-none focus:ring-1 focus:ring-[#06b6d4] focus:border-[#06b6d4] transition-shadow cursor-pointer"
                 >
-                  <option value="All Roles">All Roles</option>
+                  <option value="All Profiles">All Profiles</option>
                   <option value="PARENT">Parent</option>
-                  <option value="PROVIDER">Provider</option>
-                  <option value="SITTER">Sitter</option>
-                  <option value="FAMILY">Family</option>
+                  <option value="DAYCARE">Daycare</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" size={14} />
               </div>
@@ -221,7 +222,7 @@ const ParentUserManagement = () => {
           
           <div className="flex flex-col min-h-[280px]">
             {currentUsers.length > 0 ? (
-              currentUsers.map((user, i) => (
+              currentUsers.map((user) => (
                 <div key={user.id} className="p-6 lg:px-6 lg:py-5 flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-0 bg-white hover:bg-[#f1f5f9] transition-colors border-b border-gray-100 last:border-0">
                   
                   {/* Name */}
@@ -270,7 +271,7 @@ const ParentUserManagement = () => {
                   <div className="w-full lg:w-[10%] flex lg:justify-end gap-3 text-[9px] font-bold tracking-widest uppercase pt-4 lg:pt-0 mt-2 lg:mt-0 border-t border-gray-100 lg:border-0">
                     <button onClick={() => handleViewClick(user)} className="text-[#94a3b8] hover:text-[#06b6d4] transition-colors">VIEW</button>
                     <button 
-                      onClick={() => handleToggleStatus(user.id)}
+                      onClick={() => setStatusConfirmUserId(user.id)}
                       className={`${user.status === 'ACTIVE' ? 'text-red-500 hover:text-red-700' : 'text-[#10b981] hover:text-[#059669]'} transition-colors`}
                     >
                       {user.status === 'ACTIVE' ? 'DISABLE' : 'ENABLE'}
@@ -344,7 +345,7 @@ const ParentUserManagement = () => {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-[9px] font-bold text-[#64748b] tracking-widest uppercase mb-1">Unique ID</label>
                     <p className="text-[13px] font-medium text-[#1e293b]">#{viewingUser.id}</p>
@@ -428,9 +429,7 @@ const ParentUserManagement = () => {
                         className="w-full px-4 py-2.5 bg-white border border-[#e2e8f0] rounded-lg text-[13px] text-[#1e293b] appearance-none focus:outline-none focus:ring-1 focus:ring-[#06b6d4] focus:border-[#06b6d4] transition-shadow cursor-pointer"
                       >
                         <option value="PARENT">Parent</option>
-                        <option value="PROVIDER">Provider</option>
-                        <option value="SITTER">Sitter</option>
-                        <option value="FAMILY">Family</option>
+                        <option value="DAYCARE">Daycare</option>
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" size={14} />
                     </div>
@@ -445,6 +444,58 @@ const ParentUserManagement = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Status Confirmation Modal */}
+        {statusConfirmUserId && statusConfirmUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white w-full max-w-md shadow-2xl rounded-xl overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="bg-white border-b border-gray-100 text-[#1e293b] p-4 flex justify-between items-center">
+                <h2 className="text-[11px] font-bold tracking-widest uppercase">
+                  {statusConfirmUser.status === 'ACTIVE' ? 'Disable User Account?' : 'Enable User Account?'}
+                </h2>
+                <button onClick={() => setStatusConfirmUserId(null)} className="text-[#94a3b8] hover:text-[#1e293b] transition-colors">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-[#f1f5f9] rounded-full flex items-center justify-center text-[14px] font-bold tracking-wider text-[#1e293b]">
+                    {statusConfirmUser.initials}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-[#1e293b]">{statusConfirmUser.name}</h3>
+                    <p className="text-[12px] text-[#475569]">{statusConfirmUser.email}</p>
+                  </div>
+                </div>
+                <p className="text-[13px] text-[#64748b] leading-relaxed">
+                  Are you sure you want to {statusConfirmUser.status === 'ACTIVE' ? 'disable' : 'enable'} access for this user?
+                  {statusConfirmUser.status === 'ACTIVE' 
+                    ? ' This will temporarily suspend their ecosystem access.' 
+                    : ' This will restore their active status and log-in capabilities.'}
+                </p>
+              </div>
+              <div className="bg-[#f8fafc] border-t border-gray-100 p-4 flex justify-end gap-3">
+                <button 
+                  onClick={() => setStatusConfirmUserId(null)} 
+                  className="bg-white border border-[#e2e8f0] hover:bg-[#f1f5f9] text-[#1e293b] rounded-lg text-[10px] font-bold tracking-wider uppercase px-5 py-2.5 transition-colors"
+                >
+                  CANCEL
+                </button>
+                <button 
+                  onClick={() => {
+                    handleToggleStatus(statusConfirmUser.id);
+                    setStatusConfirmUserId(null);
+                  }} 
+                  className={`rounded-lg text-[10px] font-bold tracking-wider uppercase px-5 py-2.5 text-white transition-colors shadow-sm ${
+                    statusConfirmUser.status === 'ACTIVE' ? 'bg-red-500 hover:bg-red-600' : 'bg-[#10b981] hover:bg-[#059669]'
+                  }`}
+                >
+                  {statusConfirmUser.status === 'ACTIVE' ? 'DISABLE' : 'ENABLE'}
+                </button>
+              </div>
             </div>
           </div>
         )}

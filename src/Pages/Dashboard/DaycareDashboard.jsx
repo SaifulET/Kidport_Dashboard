@@ -26,9 +26,7 @@ export default function DaycareDashboard() {
           ],
           rolesData: [
             { name: 'Parents', value: 456, color: '#00b4d8' },
-            { name: 'Caregivers', value: 189, color: '#ffd166' },
-            { name: 'Daycare', value: 87, color: '#ff9f1c' },
-            { name: 'Family', value: 234, color: '#06d6a0' }
+            { name: 'Daycare', value: 87, color: '#ff9f1c' }
           ],
           observationsData: [
             { name: 'Mon', value: 45 },
@@ -85,7 +83,7 @@ export default function DaycareDashboard() {
               </div>
             </div>
             <div>
-              <p className="text-[12px] font-medium text-[#64748b] mb-1">Total Users</p>
+              <p className="text-[12px] font-medium text-[#64748b] mb-1">Total Daycare</p>
               <h3 className="text-2xl font-bold text-[#0f172a]">1,247</h3>
             </div>
           </div>
@@ -183,7 +181,7 @@ export default function DaycareDashboard() {
 
           {/* Donut Chart */}
           <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm flex flex-col">
-            <h3 className="text-[14px] font-bold text-[#1e293b] mb-2">User Roles</h3>
+            <h3 className="text-[14px] font-bold text-[#1e293b] mb-2">Total Daycare Analytics</h3>
             <div className="flex-1 flex flex-col justify-center">
               <div className="h-[200px] w-full relative">
                 <ResponsiveContainer width="100%" height="100%">

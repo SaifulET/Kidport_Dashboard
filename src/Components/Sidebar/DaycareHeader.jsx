@@ -38,8 +38,8 @@ const DaycareHeader = ({ showDrawer }) => {
           </div>
           {/* Name/Role */}
           <div className="flex-col pr-1 hidden sm:flex">
-            <span className="text-[13px] font-bold text-[#1e293b] leading-tight">Admin User</span>
-            <span className="text-[11px] text-[#64748b]">Super Admin</span>
+            <span className="text-[13px] font-bold text-[#1e293b] leading-tight">Daycare Admin</span>
+            <span className="text-[11px] text-[#64748b]">Daycare Profile</span>
           </div>
           {/* Chevron */}
           <ChevronDown size={14} className="text-[#94a3b8]" />

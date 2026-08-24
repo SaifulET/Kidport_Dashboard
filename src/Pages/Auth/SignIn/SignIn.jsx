@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { USER_ROLES } from "../../../utils/roles";
 
 const SignIn = () => {
   const navigate = useNavigate();
@@ -17,20 +18,14 @@ const SignIn = () => {
     setTimeout(() => {
       setLoading(false);
 
-      // ==========================================
-      // TERMINAL DASHBOARD
-      // ==========================================
       if (email === "adminparent@gmail.com" && password === "123456") {
         localStorage.setItem("user", "authenticated");
-        localStorage.setItem("role", "terminal");
+        localStorage.setItem("role", USER_ROLES.PARENT);
         navigate("/");
 
-        // ==========================================
-        // ADMIN DASHBOARD
-        // ==========================================
       } else if (email === "admindaycare@gmail.com" && password === "123456") {
         localStorage.setItem("user", "authenticated");
-        localStorage.setItem("role", "dashboard");
+        localStorage.setItem("role", USER_ROLES.DAYCARE);
         navigate("/");
 
       } else {
