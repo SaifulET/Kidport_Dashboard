@@ -35,17 +35,9 @@ const DaycareSidebar = ({ closeDrawer }) => {
     <div className="w-64 md:w-72 bg-white h-full flex flex-col font-sans border-r border-gray-100 shrink-0">
       {/* Sidebar Header */}
       <div className="pt-8 px-6 mb-8 border-b border-gray-100 pb-6">
-        <div className="flex items-center gap-2 mb-2">
-          {/* Logo SVG Placeholder mapping the screenshot logo */}
-          <div className="relative w-8 h-8 flex items-center justify-center">
-            <div className="w-6 h-6 bg-yellow-400 rounded-full absolute bottom-0 left-0" style={{ clipPath: "polygon(0 50%, 100% 50%, 100% 100%, 0 100%)" }}></div>
-            <div className="w-3 h-3 bg-teal-400 rounded-full absolute top-0 left-1"></div>
-            <div className="w-2 h-2 bg-pink-400 rounded-full absolute top-2 right-1"></div>
-          </div>
-          <span className="text-xl font-bold text-[#1eb4cd] tracking-tight">KIDPort</span>
-        </div>
+        <img src="/fulllogo.svg" alt="Seymour" className="h-10 w-auto mb-2" />
         <p className="text-[11px] text-gray-500 pl-1">
-          Daycare Section
+          Admin Section
         </p>
       </div>
 

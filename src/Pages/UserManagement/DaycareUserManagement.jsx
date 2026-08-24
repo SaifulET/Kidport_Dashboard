@@ -16,7 +16,7 @@ import {
   UserX,
   X,
 } from 'lucide-react';
-import { apiDelete, apiGet, apiPatch } from '../../lib/api';
+import { apiDelete, apiGet, apiPatch, apiPost, formatDateOnly } from '../../lib/api';
 
 const ROLE_STYLES = {
   Parent: 'bg-[#cffafe] text-[#0891b2] border-[#a5f3fc]',
@@ -92,9 +92,11 @@ const DaycareUserManagement = () => {
       
       let matchesStatus = true;
       if (statusFilter === 'Active') {
-        matchesStatus = !user.blocked;
+        matchesStatus = !user.blocked && user.status !== 'Pending';
       } else if (statusFilter === 'Blocked') {
         matchesStatus = user.blocked;
+      } else if (statusFilter === 'Pending') {
+        matchesStatus = user.status === 'Pending';
       }
 
       const matchesSearch =
@@ -121,8 +123,8 @@ const DaycareUserManagement = () => {
     () => ({
       totalParents: users.filter((user) => user.role === 'Parent').length,
       totalDaycares: users.filter((user) => user.role === 'Daycare').length,
-      activeCaregivers: users.filter((user) => user.role === 'Daycare' && !user.blocked).length,
-      blockedCaregivers: users.filter((user) => user.role === 'Daycare' && user.blocked).length,
+    activeCaregivers: users.filter((user) => user.role === 'Daycare' && !user.blocked && user.status !== 'Pending').length,
+    blockedCaregivers: users.filter((user) => user.role === 'Daycare' && user.blocked).length,
     }),
     [users]
   );
@@ -160,6 +162,20 @@ const DaycareUserManagement = () => {
     if (detailsUserId === deleteUser.id) {
       setDetailsUserId(null);
     }
+  };
+
+  const approveDaycareUser = async (userId) => {
+    await apiPost(`/auth/admin/daycare-accounts/${userId}/approve`, {});
+    setUsers((previousUsers) =>
+      previousUsers.map((user) =>
+        user.id === userId ? { ...user, status: 'Active', blocked: false } : user
+      )
+    );
+  };
+
+  const rejectDaycareUser = async (userId) => {
+    await apiPost(`/auth/admin/daycare-accounts/${userId}/reject`, {});
+    setUsers((previousUsers) => previousUsers.filter((user) => user.id !== userId));
   };
 
   if (loading) {
@@ -219,7 +235,7 @@ const DaycareUserManagement = () => {
                 setStatusFilter(value);
                 setPage(1);
               }}
-              options={['All Status', 'Active', 'Blocked']}
+              options={['All Status', 'Active', 'Pending', 'Blocked']}
             />
           </div>
         </div>
@@ -280,18 +296,25 @@ const DaycareUserManagement = () => {
                     <span className="xl:hidden text-[10px] font-bold text-[#64748b] tracking-wider uppercase">Created</span>
                     <div className="flex items-center gap-2 text-[12px] text-[#475569]">
                       <Calendar size={12} className="text-[#94a3b8]" />
-                      {user.createdDate}
+                      {formatDateOnly(user.createdDate)}
                     </div>
                   </div>
 
                   <div className="w-full xl:col-span-1 flex flex-row items-center xl:justify-end gap-2 xl:pr-2 pt-3 xl:pt-0 border-t border-gray-100 xl:border-0 mt-1 xl:mt-0">
                     <ActionButton label="Details" tone="neutral" onClick={() => setDetailsUserId(user.id)} icon={Eye} />
-                    <ActionButton
-                      label={user.blocked ? 'Unblock' : 'Block'}
-                      tone={user.blocked ? 'success' : 'warning'}
-                      onClick={() => setBlockUserId(user.id)}
-                      icon={user.blocked ? ShieldCheck : Ban}
-                    />
+                    {user.role === 'Daycare' && user.status === 'Pending' ? (
+                      <>
+                        <ActionButton label="Approve" tone="success" onClick={() => approveDaycareUser(user.id)} icon={UserCheck} />
+                        <ActionButton label="Reject" tone="danger" onClick={() => rejectDaycareUser(user.id)} icon={UserX} />
+                      </>
+                    ) : (
+                      <ActionButton
+                        label={user.blocked ? 'Unblock' : 'Block'}
+                        tone={user.blocked ? 'success' : 'warning'}
+                        onClick={() => setBlockUserId(user.id)}
+                        icon={user.blocked ? ShieldCheck : Ban}
+                      />
+                    )}
                     <ActionButton label="Delete" tone="danger" onClick={() => setDeleteUserId(user.id)} icon={Trash2} />
                   </div>
                 </div>
@@ -432,7 +455,11 @@ const RoleBadge = ({ role }) => (
 
 const StatusBadge = ({ user }) => (
   <div className="flex flex-wrap items-center gap-2">
-    {user.blocked ? (
+    {user.status === 'Pending' ? (
+      <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full border border-[#fde68a] bg-[#fffbeb] text-[#b45309]">
+        Pending
+      </span>
+    ) : user.blocked ? (
       <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full border border-[#fecaca] bg-[#fef2f2] text-[#dc2626]">
         Blocked
       </span>
@@ -463,61 +490,251 @@ const ActionButton = ({ label, tone, onClick, icon }) => {
   );
 };
 
-const DetailsModal = ({ user, children, onClose, onBlockClick }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-    <div className="bg-white w-full max-w-5xl max-h-[92vh] overflow-hidden rounded-xl shadow-xl animate-in zoom-in-95 duration-200 border border-[#e2e8f0]">
-      <div className="p-5 border-b border-gray-100 flex items-start justify-between gap-4">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-[14px] shrink-0 ${user.color}`}>
-            {user.initials}
+const DetailsModal = ({ user, children, onClose, onBlockClick }) => {
+  const [classroomData, setClassroomData] = useState(null);
+  const [classroomError, setClassroomError] = useState('');
+  const [classroomLoading, setClassroomLoading] = useState(false);
+
+  const loadClassrooms = async () => {
+    if (user.role !== 'Daycare' || !user.daycareId) return;
+    setClassroomLoading(true);
+    setClassroomError('');
+    try {
+      const response = await apiGet(`/admin/daycares/${user.daycareId}/classrooms`);
+      setClassroomData(response.data);
+    } catch (error) {
+      setClassroomError(error.message || 'Unable to load classrooms.');
+    } finally {
+      setClassroomLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadClassrooms();
+  }, [user.id, user.daycareId]);
+
+  const handleMoveChild = async (childId, classroomId) => {
+    if (!classroomId) return;
+    await apiPost(`/admin/classrooms/${classroomId}/children`, { childIds: [childId] });
+    await loadClassrooms();
+  };
+
+  const handleToggleChildBlocked = async (child) => {
+    await apiPatch(`/admin/children/${child.id}/status`, { status: child.blocked ? 'active' : 'archived' });
+    await loadClassrooms();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-5xl max-h-[92vh] overflow-hidden rounded-xl shadow-xl animate-in zoom-in-95 duration-200 border border-[#e2e8f0]">
+        <div className="p-5 border-b border-gray-100 flex items-start justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-[14px] shrink-0 ${user.color}`}>
+              {user.initials}
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-xl font-bold text-[#0f172a] truncate">{user.name}</h2>
+              <p className="text-[13px] text-[#64748b] truncate">{user.email}</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <h2 className="text-xl font-bold text-[#0f172a] truncate">{user.name}</h2>
-            <p className="text-[13px] text-[#64748b] truncate">{user.email}</p>
+          <button onClick={onClose} className="text-[#94a3b8] hover:text-[#0f172a] transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-5 overflow-y-auto max-h-[calc(92vh-86px)]">
+          <div className="grid grid-cols-1 gap-4 mb-6">
+            <DetailItem label="Full Name" value={user.name} />
+            <DetailItem label="Email" value={user.email} />
+            <DetailItem label="Role" value={<RoleBadge role={user.role} />} />
+            <DetailItem label="Account Status" value={<StatusBadge user={user} />} />
+            <DetailItem label="Created Date" value={formatDateOnly(user.createdDate)} />
+            <DetailItem label="Children Associated" value={children.length.toString()} />
+          </div>
+
+          <div className="flex flex-row items-center gap-2 mb-6">
+            <ActionButton
+              label={user.blocked ? 'Unblock' : 'Block'}
+              tone={user.blocked ? 'success' : 'warning'}
+              onClick={() => {
+                onClose();
+                onBlockClick(user.id);
+              }}
+              icon={user.blocked ? ShieldCheck : Ban}
+            />
+          </div>
+
+          <div className="border-t border-gray-100 pt-5">
+            {user.role === 'Daycare' ? (
+              <DaycareClassrooms
+                data={classroomData}
+                loading={classroomLoading}
+                error={classroomError}
+                onMoveChild={handleMoveChild}
+                onToggleChildBlocked={handleToggleChildBlocked}
+              />
+            ) : (
+              <>
+                <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#64748b] mb-4">Associated Children</h3>
+                {children.length > 0 ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {children.map((child) => (
+                      <ChildCard key={child.id} child={child} user={user} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-[#cbd5e1] p-6 text-center text-[13px] text-[#64748b]">
+                    No children are currently associated with this {user.role.toLowerCase()} user.
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
-        <button onClick={onClose} className="text-[#94a3b8] hover:text-[#0f172a] transition-colors">
-          <X size={20} />
-        </button>
+      </div>
+    </div>
+  );
+};
+
+const childStatusLabel = (child) => child.blocked || child.status === 'archived' ? 'Blocked' : 'Active';
+
+const DaycareClassrooms = ({ data, loading, error, onMoveChild, onToggleChildBlocked }) => {
+  const classrooms = data?.classrooms || [];
+  const unassignedChildren = data?.unassignedChildren || [];
+  const classroomOptions = classrooms.map((classroom) => ({ id: classroom.id, name: classroom.name }));
+
+  return (
+    <div>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
+        <div>
+          <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#64748b]">Classrooms</h3>
+          <p className="text-[12px] text-[#94a3b8] mt-1">View daycare classrooms, block child profiles, or move children between classrooms.</p>
+        </div>
+        {data?.daycare?.name && (
+          <span className="text-[12px] font-semibold text-[#0f172a] bg-[#f8fafc] border border-[#e2e8f0] rounded-full px-3 py-1">
+            {data.daycare.name}
+          </span>
+        )}
       </div>
 
-      <div className="p-5 overflow-y-auto max-h-[calc(92vh-86px)]">
-        <div className="grid grid-cols-1 gap-4 mb-6">
-          <DetailItem label="Full Name" value={user.name} />
-          <DetailItem label="Email" value={user.email} />
-          <DetailItem label="Role" value={<RoleBadge role={user.role} />} />
-          <DetailItem label="Account Status" value={<StatusBadge user={user} />} />
-          <DetailItem label="Created Date" value={user.createdDate} />
-          <DetailItem label="Children Associated" value={children.length.toString()} />
+      {loading && (
+        <div className="rounded-xl border border-dashed border-[#cbd5e1] p-6 text-center text-[13px] text-[#64748b]">
+          Loading classrooms...
         </div>
+      )}
 
-        <div className="flex flex-row items-center gap-2 mb-6">
-          <ActionButton
-            label={user.blocked ? 'Unblock' : 'Block'}
-            tone={user.blocked ? 'success' : 'warning'}
-            onClick={() => {
-              onClose();
-              onBlockClick(user.id);
-            }}
-            icon={user.blocked ? ShieldCheck : Ban}
-          />
+      {error && (
+        <div className="rounded-xl border border-[#fecaca] bg-[#fef2f2] p-4 text-[13px] text-[#991b1b]">
+          {error}
         </div>
+      )}
 
-        <div className="border-t border-gray-100 pt-5">
-          <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#64748b] mb-4">Associated Children</h3>
-          {children.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {children.map((child) => (
-                <ChildCard key={child.id} child={child} user={user} />
-              ))}
+      {!loading && !error && classrooms.length === 0 && unassignedChildren.length === 0 && (
+        <div className="rounded-xl border border-dashed border-[#cbd5e1] p-6 text-center text-[13px] text-[#64748b]">
+          No classrooms or assigned children found for this daycare.
+        </div>
+      )}
+
+      {!loading && !error && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {classrooms.map((classroom) => (
+            <div key={classroom.id} className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-4">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div>
+                  <h4 className="text-[14px] font-bold text-[#0f172a]">{classroom.name}</h4>
+                  <p className="text-[11px] text-[#64748b] mt-1">
+                    {classroom.ageBand || 'No age band'} · {classroom.children.length} child{classroom.children.length === 1 ? '' : 'ren'}
+                    {classroom.capacity ? ` · capacity ${classroom.capacity}` : ''}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {classroom.children.length > 0 ? classroom.children.map((child) => (
+                  <ClassroomChildRow
+                    key={child.id}
+                    child={child}
+                    currentClassroomId={classroom.id}
+                    classroomOptions={classroomOptions}
+                    onMoveChild={onMoveChild}
+                    onToggleChildBlocked={onToggleChildBlocked}
+                  />
+                )) : (
+                  <p className="text-[12px] text-[#94a3b8] border border-dashed border-[#cbd5e1] rounded-lg p-3 bg-white">No children in this classroom.</p>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-[#cbd5e1] p-6 text-center text-[13px] text-[#64748b]">
-              No children are currently associated with this {user.role.toLowerCase()} user.
+          ))}
+
+          {unassignedChildren.length > 0 && (
+            <div className="rounded-xl border border-[#e2e8f0] bg-white p-4">
+              <h4 className="text-[14px] font-bold text-[#0f172a] mb-1">Unassigned Children</h4>
+              <p className="text-[11px] text-[#64748b] mb-4">Move these children into a classroom.</p>
+              <div className="space-y-3">
+                {unassignedChildren.map((child) => (
+                  <ClassroomChildRow
+                    key={child.id}
+                    child={child}
+                    currentClassroomId=""
+                    classroomOptions={classroomOptions}
+                    onMoveChild={onMoveChild}
+                    onToggleChildBlocked={onToggleChildBlocked}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
+      )}
+    </div>
+  );
+};
+
+const ClassroomChildRow = ({ child, currentClassroomId, classroomOptions, onMoveChild, onToggleChildBlocked }) => (
+  <div className="rounded-lg border border-[#e2e8f0] bg-white p-3">
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-9 h-9 rounded-full bg-[#06b6d4] text-white flex items-center justify-center text-[12px] font-bold shrink-0">
+          {child.initials}
+        </div>
+        <div className="min-w-0">
+          <h5 className="text-[13px] font-bold text-[#0f172a] truncate">{child.name}</h5>
+          <p className="text-[11px] text-[#64748b]">{child.age} · Born {formatDateOnly(child.dob)}</p>
+        </div>
       </div>
+      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border self-start md:self-center ${
+        childStatusLabel(child) === 'Blocked'
+          ? 'border-[#fecaca] bg-[#fef2f2] text-[#dc2626]'
+          : 'border-[#a7f3d0] bg-[#ecfdf5] text-[#10b981]'
+      }`}>
+        {childStatusLabel(child)}
+      </span>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 mt-3">
+      <select
+        value={currentClassroomId}
+        onChange={(event) => onMoveChild(child.id, event.target.value)}
+        className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-lg px-3 py-2 text-[12px] font-medium text-[#475569] outline-none"
+      >
+        <option value="">Select classroom</option>
+        {classroomOptions.map((classroom) => (
+          <option key={classroom.id} value={classroom.id}>
+            {classroom.name}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        onClick={() => onToggleChildBlocked(child)}
+        className={`px-3 py-2 rounded-lg text-[11px] font-bold border transition-colors ${
+          childStatusLabel(child) === 'Blocked'
+            ? 'text-[#047857] border-[#a7f3d0] bg-[#ecfdf5] hover:bg-[#d1fae5]'
+            : 'text-[#b45309] border-[#fde68a] bg-[#fffbeb] hover:bg-[#fef3c7]'
+        }`}
+      >
+        {childStatusLabel(child) === 'Blocked' ? 'Unblock' : 'Block'}
+      </button>
     </div>
   </div>
 );
@@ -551,7 +768,7 @@ const ChildCard = ({ child, user }) => {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-[12px] text-[#475569] mb-3">
           <p><span className="font-semibold text-[#0f172a]">Age:</span> {child.age}</p>
-          <p><span className="font-semibold text-[#0f172a]">DOB:</span> {child.dob}</p>
+          <p><span className="font-semibold text-[#0f172a]">DOB:</span> {formatDateOnly(child.dob)}</p>
           <p><span className="font-semibold text-[#0f172a]">Gender:</span> {child.gender}</p>
           <p><span className="font-semibold text-[#0f172a]">Association:</span> {association}</p>
         </div>

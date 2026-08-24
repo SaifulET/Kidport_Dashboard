@@ -1,21 +1,34 @@
 import { useState } from 'react';
-import { Globe, Loader2 } from 'lucide-react';
+import { UserRound, Loader2 } from 'lucide-react';
+import { apiPatch, getSessionUser, saveSession } from '../../lib/api';
 
 const DaycareSettings = () => {
-  const [initials, setInitials] = useState({ name: "Seymour", email: "support@seymour.internal" });
+  const admin = getSessionUser();
+  const [initials, setInitials] = useState({ name: admin?.fullName || "Admin", email: admin?.email || "" });
   const [platformName, setPlatformName] = useState(initials.name);
   const [supportEmail, setSupportEmail] = useState(initials.email);
   const [isSaving, setIsSaving] = useState(false);
 
   const isChanged = platformName !== initials.name || supportEmail !== initials.email;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    setTimeout(() => {
+    try {
+      const response = await apiPatch('/profile', { fullName: platformName, email: supportEmail });
+      const updatedUser = response.data;
       setIsSaving(false);
       setInitials({ name: platformName, email: supportEmail });
+      saveSession({
+        user: updatedUser,
+        accessToken: localStorage.getItem('accessToken'),
+        refreshToken: localStorage.getItem('refreshToken')
+      });
       alert("Settings saved successfully!");
-    }, 1000);
+    } catch (error) {
+      alert(error.message || "Failed to save settings.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -29,8 +42,8 @@ const DaycareSettings = () => {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-[26px] font-bold text-[#0f172a] mb-1 leading-tight">Daycare Profile</h1>
-          <p className="text-[13px] text-[#64748b]">Manage daycare account details and support contact information</p>
+          <h1 className="text-[26px] font-bold text-[#0f172a] mb-1 leading-tight">Admin Profile</h1>
+          <p className="text-[13px] text-[#64748b]">Manage admin account name and email information</p>
         </div>
 
         <div className="space-y-6">
@@ -39,17 +52,17 @@ const DaycareSettings = () => {
           <div className="bg-white rounded-[14px] border border-gray-100 p-6 lg:p-8 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
             <div className="flex items-center gap-4 mb-8">
               <div className="w-[42px] h-[42px] rounded-full bg-[#e0f2fe] flex items-center justify-center text-[#06b6d4] shrink-0">
-                <Globe size={20} />
+                <UserRound size={20} />
               </div>
               <div>
-                <h3 className="text-[15px] font-bold text-[#1e293b]">Daycare Account Details</h3>
-                <p className="text-[12px] text-[#64748b]">Configure daycare profile information</p>
+                <h3 className="text-[15px] font-bold text-[#1e293b]">Admin Account Details</h3>
+                <p className="text-[12px] text-[#64748b]">Configure admin profile information</p>
               </div>
             </div>
 
             <div className="space-y-5">
               <div>
-                <label className="block text-[12px] font-semibold text-[#475569] mb-2">Daycare Name</label>
+                <label className="block text-[12px] font-semibold text-[#475569] mb-2">Admin Name</label>
                 <input
                   type="text"
                   value={platformName}
@@ -58,7 +71,7 @@ const DaycareSettings = () => {
                 />
               </div>
               <div>
-                <label className="block text-[12px] font-semibold text-[#475569] mb-2">Support Email</label>
+                <label className="block text-[12px] font-semibold text-[#475569] mb-2">Admin Email</label>
                 <input
                   type="email"
                   value={supportEmail}

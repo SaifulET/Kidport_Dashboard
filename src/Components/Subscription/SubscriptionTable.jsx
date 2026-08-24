@@ -1,5 +1,6 @@
 import React from 'react';
 import { CreditCard, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatDateOnly } from '../../lib/api';
 
 const SubscriptionTable = ({ subscriptions, filterStatus, setFilterStatus, filterPlanType, setFilterPlanType, total = subscriptions.length }) => {
   const tabs = ['All Subs', 'Active', 'Expiring', 'Cancelled'];
@@ -82,8 +83,7 @@ const SubscriptionTable = ({ subscriptions, filterStatus, setFilterStatus, filte
                     <p className="text-[#94A3B8] text-[13px]">{sub.plan.split(' ')[1]}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-white text-[13px] font-medium">{new Date(sub.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>
-                    <p className="text-[#94A3B8] text-[13px]">{new Date(sub.date).getFullYear()}</p>
+                    <p className="text-white text-[13px] font-medium">{formatDateOnly(sub.date)}</p>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-[#94A3B8] text-[13px] font-medium">

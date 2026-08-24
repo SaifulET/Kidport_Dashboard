@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, AlertTriangle, UserPlus, Check, MessageSquare, Loader2, Info } from 'lucide-react';
-import { apiGet, apiPatch } from '../../lib/api';
+import { useNavigate } from 'react-router-dom';
+import { apiGet, apiPatch, formatDateOnly } from '../../lib/api';
 
 const formatNotificationDate = (value) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return { date: '', time: '' };
-  return {
-    date: date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
-    time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  };
+  return { date: formatDateOnly(value), time: '' };
 };
 
 const DaycareNotifications = () => {
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const navigate = useNavigate();
   const itemsPerPage = 6;
 
   useEffect(() => {
@@ -40,6 +37,11 @@ const DaycareNotifications = () => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
+  const openNotification = async (notification) => {
+    if (!notification.read) await markAsRead(notification.id);
+    if (notification.link) navigate(notification.link);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
@@ -59,9 +61,14 @@ const DaycareNotifications = () => {
 
   const getIcon = (type) => {
     switch (type) {
-      case 'alert': return <AlertTriangle size={20} className="text-[#ef4444]" />;
+      case 'support_issue_created':
       case 'message': return <MessageSquare size={20} className="text-[#3b82f6]" />;
+      case 'daycare_account_pending':
+      case 'parent_account_created':
+      case 'child_created':
       case 'user': return <UserPlus size={20} className="text-[#10b981]" />;
+      case 'milestone_achieved':
+      case 'alert': return <AlertTriangle size={20} className="text-[#ef4444]" />;
       case 'info': return <Info size={20} className="text-[#8b5cf6]" />;
       default: return <Bell size={20} className="text-[#64748b]" />;
     }
@@ -107,13 +114,14 @@ const DaycareNotifications = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] overflow-hidden">
           <div className="flex flex-col min-h-[450px]">
             {currentItems.map((notification) => (
-              <div 
+              <div
                 key={notification.id} 
+                onClick={() => openNotification(notification)}
                 className={`p-4 md:p-5 flex items-start gap-3 md:gap-4 border-b border-[#e2e8f0] transition-colors group relative ${
                   notification.read 
                     ? 'hover:bg-[#f8fafc]' 
                     : 'bg-[#f0fdfa] hover:bg-[#ccfbf1]'
-                }`}
+                } ${notification.link ? 'cursor-pointer' : ''}`}
               >
                 {!notification.read && (
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#00a99d]"></div>
@@ -127,7 +135,7 @@ const DaycareNotifications = () => {
                       {notification.title}
                     </h3>
                     <span className="text-[11px] md:text-[12px] text-[#94a3b8] font-medium shrink-0">
-                      {notification.date} &bull; {notification.time}
+                      {notification.date}
                     </span>
                   </div>
                   <p className={`text-[13px] leading-relaxed ${notification.read ? 'text-[#64748b]' : 'text-[#334155] font-medium'}`}>
@@ -136,7 +144,10 @@ const DaycareNotifications = () => {
                 </div>
                 {!notification.read && (
                   <button 
-                    onClick={() => markAsRead(notification.id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      markAsRead(notification.id);
+                    }}
                     className="absolute right-4 top-4 lg:relative lg:right-auto lg:top-auto opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity p-1.5 md:p-2 text-[#94a3b8] hover:text-[#0f172a] hover:bg-white rounded-lg shadow-sm border border-transparent hover:border-[#e2e8f0]"
                     title="Mark as read"
                   >

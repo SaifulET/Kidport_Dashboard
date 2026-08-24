@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, Video, Mic, FileText, Eye, CheckCircle2, Flag, Clock, Loader2, Trash2, AlertTriangle, X } from 'lucide-react';
-import { apiDelete, apiGet } from '../../lib/api';
+import { apiDelete, apiGet, formatDateOnly } from '../../lib/api';
 
 const DaycareObservations = () => {
   const [loading, setLoading] = useState(true);
@@ -202,7 +202,7 @@ const DaycareObservations = () => {
                       <span className="font-semibold text-[#1e293b]">{obs.author}</span>
                     </div>
                     <div className="text-[#94a3b8]">
-                      {obs.time}
+                      {formatDateOnly(obs.time)}
                     </div>
                   </div>
 

@@ -11,6 +11,33 @@ export const API_BASE_URL = (() => {
 
 export const getAccessToken = () => localStorage.getItem('accessToken');
 
+export const getSessionUser = () => {
+  const raw = localStorage.getItem('user');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
+export const getInitials = (name = '') =>
+  name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'AD';
+
+export const formatDateOnly = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(0, 10);
+};
+
 export const clearSession = () => {
   localStorage.removeItem('user');
   localStorage.removeItem('role');
@@ -21,7 +48,7 @@ export const clearSession = () => {
 export const saveSession = ({ user, accessToken, refreshToken }) => {
   localStorage.setItem('user', JSON.stringify(user));
   localStorage.setItem('role', user?.userType || 'admin');
-  localStorage.setItem('accessToken', accessToken);
+  if (accessToken) localStorage.setItem('accessToken', accessToken);
   if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
 };
 

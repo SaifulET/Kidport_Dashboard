@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, TrendingDown, Loader2, Users, Smile, Eye, Brain, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
-import { apiGet } from '../../lib/api';
+import { apiGet, formatDateOnly } from '../../lib/api';
 
 const formatNumber = (value) => Number(value || 0).toLocaleString();
 
@@ -261,7 +261,7 @@ export default function DaycareDashboard() {
                     )}
                     <div className="flex items-center gap-1.5 text-[#94a3b8]">
                       <Clock size={12} />
-                      <span className="text-[11px]">{act.time}</span>
+                      <span className="text-[11px]">{formatDateOnly(act.time)}</span>
                     </div>
                   </div>
                 </div>

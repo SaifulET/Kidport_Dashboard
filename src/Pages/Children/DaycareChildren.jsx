@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, MoreVertical, Calendar, Heart, TrendingUp, RefreshCw, Loader2, X, AlertTriangle } from 'lucide-react';
-import { apiGet, apiPatch } from '../../lib/api';
+import { apiGet, apiPatch, formatDateOnly } from '../../lib/api';
 
 const DaycareChildren = () => {
   const [loading, setLoading] = useState(true);
@@ -289,7 +289,7 @@ const DaycareChildren = () => {
                 <div className="space-y-4 mb-6">
                   <div className="flex items-center gap-2 text-[12px] font-medium text-[#475569]">
                     <Calendar size={14} className="text-[#94a3b8]" />
-                    Born: {child.born}
+                    Born: {formatDateOnly(child.born)}
                   </div>
 
                   <div>

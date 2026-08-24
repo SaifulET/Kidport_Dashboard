@@ -1,9 +1,14 @@
 import React from "react";
-import { Search, Bell, ChevronDown, Menu } from "lucide-react";
+import { Bell, ChevronDown, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getInitials, getSessionUser } from "../../lib/api";
 
 const DaycareHeader = ({ showDrawer }) => {
   const navigate = useNavigate();
+  const admin = getSessionUser();
+  const adminName = admin?.fullName || "Admin";
+  const adminEmail = admin?.email || "";
+
   return (
     <div className="h-[72px] flex items-center justify-between px-4 md:px-8 bg-white border-b border-gray-100 font-sans">
 
@@ -34,12 +39,12 @@ const DaycareHeader = ({ showDrawer }) => {
         >
           {/* Avatar */}
           <div className="w-[38px] h-[38px] rounded-full bg-[#00a99d] flex items-center justify-center text-white font-bold text-[14px] shadow-sm">
-            AD
+            {getInitials(adminName)}
           </div>
           {/* Name/Role */}
           <div className="flex-col pr-1 hidden sm:flex">
-            <span className="text-[13px] font-bold text-[#1e293b] leading-tight">Daycare Admin</span>
-            <span className="text-[11px] text-[#64748b]">Daycare Profile</span>
+            <span className="text-[13px] font-bold text-[#1e293b] leading-tight">{adminName}</span>
+            <span className="text-[11px] text-[#64748b]">{adminEmail}</span>
           </div>
           {/* Chevron */}
           <ChevronDown size={14} className="text-[#94a3b8]" />

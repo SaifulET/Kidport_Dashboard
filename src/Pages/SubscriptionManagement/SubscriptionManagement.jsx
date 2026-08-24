@@ -7,7 +7,7 @@ import RevenueGrowth from '../../Components/Subscription/RevenueGrowth';
 import SubscriptionTable from '../../Components/Subscription/SubscriptionTable';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { apiGet } from '../../lib/api';
+import { apiGet, formatDateOnly } from '../../lib/api';
 
 const SubscriptionManagement = () => {
   const [filterStatus, setFilterStatus] = useState('All Subs');
@@ -59,7 +59,7 @@ const SubscriptionManagement = () => {
         sub.name,
         sub.email,
         sub.plan,
-        new Date(sub.date).toLocaleDateString(),
+        formatDateOnly(sub.date),
         sub.payment,
         sub.status,
       ]),
