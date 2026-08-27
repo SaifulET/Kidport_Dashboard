@@ -1,6 +1,47 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, MoreVertical, Calendar, Heart, TrendingUp, RefreshCw, Loader2, X, AlertTriangle } from 'lucide-react';
-import { apiGet, apiPatch, formatDateOnly } from '../../lib/api';
+import { apiGet, apiPatch } from '../../lib/api';
+
+const DEVELOPMENT_COLORS = ['bg-[#06b6d4]', 'bg-[#10b981]', 'bg-[#fbbf24]', 'bg-[#ef4444]', 'bg-[#a855f7]', 'bg-[#ec4899]'];
+const DEFAULT_DEVELOPMENT_DOMAINS = [
+  'Language & Literacy',
+  'Motor',
+  'Social',
+  'Cognitive',
+  'Creative Arts & Expression',
+  'Community & Self-Awareness'
+];
+
+const safeNumber = (value, fallback = 0) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+};
+
+const safePercent = (value) => Math.max(0, Math.min(100, Math.round(safeNumber(value))));
+
+const formatDayMonthYear = (value) => {
+  if (!value) return 'N/A';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'N/A';
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${day}-${month}-${date.getFullYear()}`;
+};
+
+const developmentDomainsForChild = (child) => {
+  const progress = Array.isArray(child.developmentProgress) ? child.developmentProgress : [];
+  const source = progress.length
+    ? progress.map((domain) => ({
+        name: domain.name || domain.domain || 'Development domain',
+        pct: safePercent(domain.percentage ?? domain.progress ?? domain.score)
+      }))
+    : DEFAULT_DEVELOPMENT_DOMAINS.map((name) => ({ name, pct: 0 }));
+
+  return source.map((domain, index) => ({
+    ...domain,
+    color: DEVELOPMENT_COLORS[index % DEVELOPMENT_COLORS.length]
+  }));
+};
 
 const DaycareChildren = () => {
   const [loading, setLoading] = useState(true);
@@ -289,7 +330,7 @@ const DaycareChildren = () => {
                 <div className="space-y-4 mb-6">
                   <div className="flex items-center gap-2 text-[12px] font-medium text-[#475569]">
                     <Calendar size={14} className="text-[#94a3b8]" />
-                    Born: {formatDateOnly(child.born)}
+                    Born: {formatDayMonthYear(child.born)}
                   </div>
 
                   <div>
@@ -318,14 +359,7 @@ const DaycareChildren = () => {
                 <div className="mb-6">
                   <p className="text-[11px] font-semibold text-[#64748b] mb-3">Development Focus</p>
                   <div className="flex gap-2">
-                    {[
-                      { name: 'Language & Literacy', color: 'bg-[#06b6d4]', pct: ((child.id * 17 + 50) % 41) + 55 },
-                      { name: 'Motor', color: 'bg-[#10b981]', pct: ((child.id * 23 + 40) % 36) + 60 },
-                      { name: 'Social', color: 'bg-[#fbbf24]', pct: ((child.id * 13 + 60) % 46) + 50 },
-                      { name: 'Cognitive', color: 'bg-[#ef4444]', pct: ((child.id * 29 + 30) % 31) + 65 },
-                      { name: 'Creative Arts & Expression', color: 'bg-[#a855f7]', pct: ((child.id * 19 + 70) % 41) + 55 },
-                      { name: 'Community & Self-Awareness', color: 'bg-[#ec4899]', pct: ((child.id * 7 + 80) % 36) + 60 }
-                    ].map((domain, index) => (
+                    {developmentDomainsForChild(child).map((domain, index) => (
                       <div 
                         key={index} 
                         title={`${domain.name}: ${domain.pct}%`}
@@ -349,7 +383,7 @@ const DaycareChildren = () => {
                 {/* Footer */}
                 <div className="flex justify-between items-center text-[11px] font-medium text-[#94a3b8] pt-4 border-t border-gray-100">
                   <span>Last activity</span>
-                  <span className="text-[#1e293b] font-semibold">{child.lastActivity}</span>
+                  <span className="text-[#1e293b] font-semibold">{formatDayMonthYear(child.lastActivity)}</span>
                 </div>
 
               </div>
