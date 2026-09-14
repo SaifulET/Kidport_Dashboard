@@ -23,6 +23,7 @@ import ObservationsPage from "../Pages/Observations/Observations";
 import ParentNotifications from "../Pages/Notifications/ParentNotifications";
 import DaycareNotifications from "../Pages/Notifications/DaycareNotifications";
 import SupportPage from "../Pages/Support/Support";
+import DomainManagement from "../Pages/Domains/DomainManagement";
 
 export const router = createBrowserRouter([
   {
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
         children: [
           { path: "/", element: <Dashboard /> },
           { path: "/dashboard", element: <Dashboard /> },
+          { path: "/domains", element: <DomainManagement /> },
           { path: "/children", element: <ChildrenPage /> },
           { path: "/observations", element: <ObservationsPage /> },
           { path: "/ai-monitoring", element: <AIMonitoringPage /> },

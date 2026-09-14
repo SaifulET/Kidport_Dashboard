@@ -7,6 +7,7 @@ import {
   Brain,
   Settings,
   Eye,
+  Layers,
   MessageSquare,
   LogOut
 } from "lucide-react";
@@ -23,6 +24,7 @@ const DaycareSidebar = ({ closeDrawer }) => {
 
   const dashboardMenuItems = [
     { icon: LayoutGrid, label: "Dashboard", Link: "/" },
+    { icon: Layers, label: "Domain", Link: "/domains" },
     { icon: Users, label: "Caregivers", Link: "/user-management" },
     { icon: Smile, label: "Children Profiles", Link: "/children" },
     { icon: Eye, label: "Observations", Link: "/observations" },

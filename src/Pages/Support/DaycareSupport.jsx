@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, User, MessageSquare, AlertCircle, Clock, CheckCircle2, ChevronRight, Inbox, Mail, ShieldAlert, Paperclip, Trash2, X } from 'lucide-react';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api';
+import { createSocket } from '../../lib/socket';
 
 const DEFAULT_TICKETS = [
   {
@@ -158,6 +159,26 @@ const DEFAULT_TICKETS = [
   }
 ];
 
+const normalizeUrgency = (value = '') => {
+  const normalized = value.toLowerCase();
+  if (normalized === 'high') return 'High';
+  if (normalized === 'medium') return 'Medium';
+  return 'Low';
+};
+
+const normalizeTicket = (ticket) => ({
+  ...ticket,
+  urgency: normalizeUrgency(ticket.urgency),
+  messages: ticket.messages || [],
+  messagesLoaded: Boolean(ticket.messages?.length)
+});
+
+const mergeMessages = (current, incoming) => {
+  const additions = Array.isArray(incoming) ? incoming : [incoming];
+  const existing = new Set(current.map((message) => message.id));
+  return [...current, ...additions.filter((message) => message?.id && !existing.has(message.id))];
+};
+
 const DaycareSupport = () => {
   const [tickets, setTickets] = useState([]);
   const [activeTicketId, setActiveTicketId] = useState(null);
@@ -170,7 +191,7 @@ const DaycareSupport = () => {
     const fetchTickets = async () => {
       try {
         const response = await apiGet('/admin/support/tickets?limit=100');
-        setTickets(response.data.map((ticket) => ({ ...ticket, messages: ticket.messages || [] })));
+        setTickets(response.data.map(normalizeTicket));
       } catch (error) {
         console.error("Error fetching support tickets:", error);
         setTickets([]);
@@ -178,20 +199,58 @@ const DaycareSupport = () => {
     };
 
     fetchTickets();
-    const interval = setInterval(fetchTickets, 10000);
-    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const socket = createSocket();
+
+    socket.on('support:ticket', (ticket) => {
+      setTickets((previous) => {
+        const nextTicket = normalizeTicket(ticket);
+        const existing = previous.find((item) => item.id === nextTicket.id);
+        if (!existing) return [nextTicket, ...previous];
+
+        return previous.map((item) =>
+          item.id === nextTicket.id
+            ? { ...item, ...nextTicket, messages: item.messages || [], messagesLoaded: item.messagesLoaded }
+            : item
+        );
+      });
+    });
+
+    socket.on('support:ticket:deleted', ({ ticketId }) => {
+      setTickets((previous) => previous.filter((ticket) => ticket.id !== ticketId));
+      setActiveTicketId((current) => (current === ticketId ? null : current));
+    });
+
+    socket.on('support:message', ({ userId, message }) => {
+      setTickets((previous) =>
+        previous.map((ticket) =>
+          ticket.userId === userId
+            ? {
+                ...ticket,
+                lastActivity: message.time || new Date().toISOString(),
+                messageCount: (ticket.messageCount || 0) + 1,
+                messages: ticket.messagesLoaded ? mergeMessages(ticket.messages, message) : ticket.messages
+              }
+            : ticket
+        )
+      );
+    });
+
+    return () => socket.disconnect();
   }, []);
 
   useEffect(() => {
     const loadMessages = async () => {
       const activeTicket = tickets.find(t => t.id === activeTicketId);
-      if (!activeTicket?.userId || activeTicket.messages?.length) return;
+      if (!activeTicket?.userId || activeTicket.messagesLoaded) return;
 
       try {
         const response = await apiGet(`/admin/support/tickets/${activeTicket.userId}/messages?limit=100`);
         setTickets((previous) =>
           previous.map((ticket) =>
-            ticket.id === activeTicket.id ? { ...ticket, messages: response.data } : ticket
+            ticket.id === activeTicket.id ? { ...ticket, messages: response.data, messagesLoaded: true } : ticket
           )
         );
       } catch (error) {
@@ -223,7 +282,8 @@ const DaycareSupport = () => {
         return {
           ...t,
           lastActivity: "Just now",
-          messages: [...t.messages, newReply]
+          messages: mergeMessages(t.messages, newReply),
+          messagesLoaded: true
         };
       }
       return t;
