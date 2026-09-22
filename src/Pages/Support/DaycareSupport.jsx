@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, User, MessageSquare, AlertCircle, Clock, CheckCircle2, ChevronRight, Inbox, Mail, ShieldAlert, Paperclip, Trash2, X } from 'lucide-react';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api';
 import { createSocket } from '../../lib/socket';
@@ -186,20 +186,25 @@ const DaycareSupport = () => {
   const [activeAttachment, setActiveAttachment] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const messagesEndRef = useRef(null);
+  const ticketsRef = useRef([]);
 
   useEffect(() => {
-    const fetchTickets = async () => {
-      try {
-        const response = await apiGet('/admin/support/tickets?limit=100');
-        setTickets(response.data.map(normalizeTicket));
-      } catch (error) {
-        console.error("Error fetching support tickets:", error);
-        setTickets([]);
-      }
-    };
+    ticketsRef.current = tickets;
+  }, [tickets]);
 
-    fetchTickets();
+  const fetchTickets = useCallback(async () => {
+    try {
+      const response = await apiGet('/admin/support/tickets?limit=100');
+      setTickets(response.data.map(normalizeTicket));
+    } catch (error) {
+      console.error("Error fetching support tickets:", error);
+      setTickets([]);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
 
   useEffect(() => {
     const socket = createSocket();
@@ -224,22 +229,28 @@ const DaycareSupport = () => {
     });
 
     socket.on('support:message', ({ userId, message }) => {
+      const hasMatchingTicket = ticketsRef.current.some((ticket) => ticket.userId === userId);
+
       setTickets((previous) =>
-        previous.map((ticket) =>
-          ticket.userId === userId
-            ? {
-                ...ticket,
-                lastActivity: message.time || new Date().toISOString(),
-                messageCount: (ticket.messageCount || 0) + 1,
-                messages: ticket.messagesLoaded ? mergeMessages(ticket.messages, message) : ticket.messages
-              }
-            : ticket
-        )
+        previous.map((ticket) => {
+          if (ticket.userId !== userId) return ticket;
+
+          return {
+            ...ticket,
+            lastActivity: message.time || new Date().toISOString(),
+            messageCount: (ticket.messageCount || 0) + 1,
+            messages: ticket.messagesLoaded ? mergeMessages(ticket.messages, message) : ticket.messages
+          };
+        })
       );
+
+      if (!hasMatchingTicket) {
+        fetchTickets();
+      }
     });
 
     return () => socket.disconnect();
-  }, []);
+  }, [fetchTickets]);
 
   useEffect(() => {
     const loadMessages = async () => {
