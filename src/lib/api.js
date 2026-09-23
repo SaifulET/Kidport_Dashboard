@@ -107,7 +107,7 @@ export const apiRequest = async (path, options = {}, retryOnUnauthorized = true)
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
   const { requestId: _requestId, ...fetchOptions } = options;
-  const init = { credentials: 'include', ...fetchOptions, headers };
+  const init = { credentials: 'include', cache: 'no-store', ...fetchOptions, headers };
   const isFormData = options.body instanceof FormData;
   if (options.body && typeof options.body === 'object' && !isFormData) {
     headers.set('Content-Type', 'application/json');
