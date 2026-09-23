@@ -39,5 +39,4 @@ files.forEach(file => {
   content = content.replace(/text-gray-400 hover:bg-gray-50/g, "text-[#64748b] hover:bg-[#f1f5f9]");
 
   fs.writeFileSync(filepath, content, 'utf8');
-  console.log('Updated ' + file);
 });

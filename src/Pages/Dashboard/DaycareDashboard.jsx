@@ -18,8 +18,7 @@ export default function DaycareDashboard() {
         const response = await apiGet('/admin/dashboard');
         setData(response.data);
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-        setData({
+                setData({
           stats: { totalDaycares: 0, totalChildren: 0, dailyObservations: 0, activeCareCircle: 0 },
           userActivityData: [],
           rolesData: [],

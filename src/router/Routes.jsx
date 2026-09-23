@@ -1,46 +1,66 @@
+import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import MainLayout from "../Layout/Main/Main";
-import SignIn from "../Pages/Auth/SignIn/SignIn";
-import ForgatePassword from "../Pages/Auth/ForgatePassword/ForgatePassword";
 import PrivateRoute from "./PrivateRoute";
-import Dashboard from "../Pages/Dashboard/Dashboard";
-import VerifyCode from "../Pages/Auth/VerifyCode/VerifyCode";
-import NewPass from "../Pages/Auth/NewPass/NewPass";
-import UserManagement from "../Pages/UserManagement/UserManagement";
-import UserDetails from "../Pages/UserManagement/UserDetails";
-import EventDetails from "../Pages/UserManagement/EventDetails";
-import ProtocolManager from "../Pages/ProtocolManager/ProtocolManager";
-import CreateProtocol from "../Pages/ProtocolManager/CreateProtocol";
-import ExerciseLibrary from "../Pages/ExerciseLibrary/ExerciseLibrary";
-import AddExercise from "../Pages/ExerciseLibrary/AddExercise";
-import VideoManager from "../Pages/VideoManager/VideoManager";
-import UploadVideo from "../Pages/VideoManager/UploadVideo";
-import SubscriptionManagement from "../Pages/SubscriptionManagement/SubscriptionManagement";
-import Settings from "../Pages/Settings/Settings";
-import ChildrenPage from "../Pages/Children/Children";
-import AIMonitoringPage from "../Pages/AIMonitoring/AIMonitoring";
-import ObservationsPage from "../Pages/Observations/Observations";
-import ParentNotifications from "../Pages/Notifications/ParentNotifications";
-import DaycareNotifications from "../Pages/Notifications/DaycareNotifications";
-import SupportPage from "../Pages/Support/Support";
-import DomainManagement from "../Pages/Domains/DomainManagement";
+
+const SignIn = lazy(() => import("../Pages/Auth/SignIn/SignIn"));
+const ForgatePassword = lazy(() => import("../Pages/Auth/ForgatePassword/ForgatePassword"));
+const Dashboard = lazy(() => import("../Pages/Dashboard/Dashboard"));
+const VerifyCode = lazy(() => import("../Pages/Auth/VerifyCode/VerifyCode"));
+const NewPass = lazy(() => import("../Pages/Auth/NewPass/NewPass"));
+const UserManagement = lazy(() => import("../Pages/UserManagement/UserManagement"));
+const UserDetails = lazy(() => import("../Pages/UserManagement/UserDetails"));
+const EventDetails = lazy(() => import("../Pages/UserManagement/EventDetails"));
+const ProtocolManager = lazy(() => import("../Pages/ProtocolManager/ProtocolManager"));
+const CreateProtocol = lazy(() => import("../Pages/ProtocolManager/CreateProtocol"));
+const ExerciseLibrary = lazy(() => import("../Pages/ExerciseLibrary/ExerciseLibrary"));
+const AddExercise = lazy(() => import("../Pages/ExerciseLibrary/AddExercise"));
+const VideoManager = lazy(() => import("../Pages/VideoManager/VideoManager"));
+const UploadVideo = lazy(() => import("../Pages/VideoManager/UploadVideo"));
+const SubscriptionManagement = lazy(() => import("../Pages/SubscriptionManagement/SubscriptionManagement"));
+const Settings = lazy(() => import("../Pages/Settings/Settings"));
+const ChildrenPage = lazy(() => import("../Pages/Children/Children"));
+const AIMonitoringPage = lazy(() => import("../Pages/AIMonitoring/AIMonitoring"));
+const ObservationsPage = lazy(() => {
+  const startedAt = performance.now();
+  const clickedAt = Number(sessionStorage.getItem('observationClickAt') || window.__observationClickAt || 0);
+    return import("../Pages/Observations/Observations").then((module) => {
+        return module;
+  });
+});
+const ParentNotifications = lazy(() => import("../Pages/Notifications/ParentNotifications"));
+const DaycareNotifications = lazy(() => import("../Pages/Notifications/DaycareNotifications"));
+const SupportPage = lazy(() => import("../Pages/Support/Support"));
+const DomainManagement = lazy(() => import("../Pages/Domains/DomainManagement"));
+
+const routeLoader = (
+  <div className="min-h-screen bg-white flex items-center justify-center text-[10px] font-bold tracking-widest uppercase text-[#94a3b8]">
+    Loading
+  </div>
+);
+
+const page = (element) => (
+  <Suspense fallback={routeLoader}>
+    {element}
+  </Suspense>
+);
 
 export const router = createBrowserRouter([
   {
     path: "/sign-in",
-    element: <SignIn />,
+    element: page(<SignIn />),
   },
   {
     path: "/forgate-password",
-    element: <ForgatePassword />,
+    element: page(<ForgatePassword />),
   },
   {
     path: "/verify-code",
-    element: <VerifyCode />,
+    element: page(<VerifyCode />),
   },
   {
     path: "/new-password",
-    element: <NewPass />,
+    element: page(<NewPass />),
   },
   {
     element: <PrivateRoute />,
@@ -49,26 +69,26 @@ export const router = createBrowserRouter([
         path: "/",
         element: <MainLayout />,
         children: [
-          { path: "/", element: <Dashboard /> },
-          { path: "/dashboard", element: <Dashboard /> },
-          { path: "/domains", element: <DomainManagement /> },
-          { path: "/children", element: <ChildrenPage /> },
-          { path: "/observations", element: <ObservationsPage /> },
-          { path: "/ai-monitoring", element: <AIMonitoringPage /> },
-          { path: "/protocol-manager", element: <ProtocolManager /> },
-          { path: "/user-management", element: <UserManagement /> },
-          { path: "/user-management/:id", element: <UserDetails /> },
-          { path: "/event-details/:id", element: <EventDetails /> },
-          { path: "/create-protocol", element: <CreateProtocol /> },
-          { path: "/exercise-library", element: <ExerciseLibrary /> },
-          { path: "/add-exercise", element: <AddExercise /> },
-          { path: "/video-manager", element: <VideoManager /> },
-          { path: "/upload-video", element: <UploadVideo /> },
-          { path: "/subscription", element: <SubscriptionManagement /> },
-          { path: "/settings", element: <Settings /> },
-          { path: "/support", element: <SupportPage /> },
-          { path: "/notifications", element: <ParentNotifications /> },
-          { path: "/daycare-notifications", element: <DaycareNotifications /> },
+          { path: "/", element: page(<Dashboard />) },
+          { path: "/dashboard", element: page(<Dashboard />) },
+          { path: "/domains", element: page(<DomainManagement />) },
+          { path: "/children", element: page(<ChildrenPage />) },
+          { path: "/observations", element: page(<ObservationsPage />) },
+          { path: "/ai-monitoring", element: page(<AIMonitoringPage />) },
+          { path: "/protocol-manager", element: page(<ProtocolManager />) },
+          { path: "/user-management", element: page(<UserManagement />) },
+          { path: "/user-management/:id", element: page(<UserDetails />) },
+          { path: "/event-details/:id", element: page(<EventDetails />) },
+          { path: "/create-protocol", element: page(<CreateProtocol />) },
+          { path: "/exercise-library", element: page(<ExerciseLibrary />) },
+          { path: "/add-exercise", element: page(<AddExercise />) },
+          { path: "/video-manager", element: page(<VideoManager />) },
+          { path: "/upload-video", element: page(<UploadVideo />) },
+          { path: "/subscription", element: page(<SubscriptionManagement />) },
+          { path: "/settings", element: page(<Settings />) },
+          { path: "/support", element: page(<SupportPage />) },
+          { path: "/notifications", element: page(<ParentNotifications />) },
+          { path: "/daycare-notifications", element: page(<DaycareNotifications />) },
         ],
       },
     ],

@@ -63,8 +63,7 @@ const DaycareUserManagement = () => {
         const response = await apiGet('/admin/users?limit=100');
         setUsers(response.data);
       } catch (error) {
-        console.error('Error fetching user data:', error);
-        setUsers([]);
+                setUsers([]);
       } finally {
         setLoading(false);
       }

@@ -72,9 +72,7 @@ const ParentReports = () => {
           systemStatus: 'OPTIMAL',
           lastSync: '12:04:33 UTC'
         });
-      } catch (error) {
-        console.error("Error fetching reports:", error);
-      } finally {
+      } catch (_error) {} finally {
         setLoading(false);
       }
     };

@@ -1,20 +1,28 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { apiPost } from "../../../lib/api";
 
 const ForgatePassword = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate sending reset email
-    setTimeout(() => {
-      setLoading(false);
+    setError("");
+
+    try {
+      await apiPost("/auth/forgot-password", { email });
+      sessionStorage.setItem("passwordResetEmail", email.trim().toLowerCase());
       navigate("/verify-code");
-    }, 1500);
+    } catch (error) {
+      setError(error.message || "Failed to send reset code");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,6 +49,12 @@ const ForgatePassword = () => {
 
         {/* Form section */}
         <form onSubmit={handleSubmit}>
+          {error && (
+            <div className="mb-5 text-red-600 text-[13px] font-medium bg-red-50 p-3 rounded-lg border border-red-100">
+              {error}
+            </div>
+          )}
+
           {/* Email Field */}
           <div className="mb-6">
             <label className="block text-[13px] font-semibold text-[#475569] mb-2">

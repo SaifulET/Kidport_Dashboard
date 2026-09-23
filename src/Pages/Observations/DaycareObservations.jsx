@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, ChevronDown, Video, Mic, FileText, Eye, CheckCircle2, Flag, Clock, Loader2, Trash2, AlertTriangle, X } from 'lucide-react';
+import { Search, ChevronDown, Video, Mic, FileText, Eye, Loader2, Trash2, AlertTriangle, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiDelete, apiGet, formatDateOnly } from '../../lib/api';
 
 const DaycareObservations = () => {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState(null);
+  const [pagination, setPagination] = useState({ page: 1, limit: 8, total: 0, totalPages: 1 });
 
   // Search and Filter State
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('All Types');
+  const [page, setPage] = useState(1);
 
   // Delete observation modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -16,9 +20,7 @@ const DaycareObservations = () => {
 
   const handleDeleteConfirm = () => {
     if (obsToDelete) {
-      apiDelete(`/admin/observations/${obsToDelete.id}`).catch((error) => {
-        console.error("Error deleting observation:", error);
-      });
+      apiDelete(`/admin/observations/${obsToDelete.id}`).catch(() => {});
       setData(prev => ({
         ...prev,
         stats: {
@@ -34,11 +36,37 @@ const DaycareObservations = () => {
   };
 
   useEffect(() => {
+    const mountedAt = performance.now();
+    const clickedAt = Number(sessionStorage.getItem('observationClickAt') || window.__observationClickAt || 0);
+      }, []);
+
+  useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
+      const startedAt = performance.now();
+      const clickedAt = Number(sessionStorage.getItem('observationClickAt') || window.__observationClickAt || 0);
+                  const isInitialLoad = !data;
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
       try {
-        const response = await apiGet('/admin/observations?limit=100');
-        setData({
+        const paramsStartedAt = performance.now();
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: '8'
+        });
+        if (debouncedSearch) params.set('search', debouncedSearch);
+        if (typeFilter !== 'All Types') {
+          const typeMap = { Video: 'video', Audio: 'voice', Document: 'text', Visual: 'photo' };
+          params.set('type', typeMap[typeFilter] || typeFilter.toLowerCase());
+        }
+        const paramsDoneAt = performance.now();
+                const apiStartedAt = performance.now();
+        const response = await apiGet(`/admin/observations?${params.toString()}`);
+        const apiDoneAt = performance.now();
+                const mapStartedAt = performance.now();
+        const nextData = {
           stats: {
             total: response.stats.total.toLocaleString(),
             today: response.stats.today.toLocaleString(),
@@ -54,32 +82,47 @@ const DaycareObservations = () => {
               observation.type === 'photo' ? 'bg-[#fce7f3] text-[#ec4899]' :
               'bg-[#f1f5f9] text-[#475569]'
           }))
-        });
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
+        };
+        const mapDoneAt = performance.now();
+                const stateStartedAt = performance.now();
+        setData(nextData);
+        setPagination(response.pagination || { page, limit: 8, total: response.data.length, totalPages: 1 });
+                      } catch (_error) {} finally {
         setLoading(false);
-      }
+        setRefreshing(false);
+              }
     };
     fetchData();
-  }, []);
+  }, [page, debouncedSearch, typeFilter]);
 
   const filteredObservations = useMemo(() => {
-    if (!data) return [];
-    return data.observations.filter(obs => {
-      const searchLower = search.toLowerCase();
-      const matchesSearch = 
-        obs.title.toLowerCase().includes(searchLower) || 
-        obs.child.toLowerCase().includes(searchLower) ||
-        obs.author.toLowerCase().includes(searchLower);
-      
-      const matchesType = typeFilter === 'All Types' || obs.type === typeFilter.toLowerCase();
+    const startedAt = performance.now();
+    const result = data?.observations || [];
+        return result;
+  }, [data]);
 
-      return matchesSearch && matchesType;
-    });
-  }, [data, search, typeFilter]);
+  useEffect(() => {
+    if (!loading && data) {
+      const committedAt = performance.now();
+            requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+                  });
+      });
+    }
+  }, [loading, data]);
 
-  if (loading || !data) {
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, typeFilter]);
+
+  if (loading && !data) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-gray-400">
@@ -171,8 +214,15 @@ const DaycareObservations = () => {
           </div>
         </div>
 
+        {refreshing && (
+          <div className="mb-4 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-[#06b6d4]">
+            <Loader2 className="animate-spin" size={14} />
+            Refreshing observations
+          </div>
+        )}
+
         {/* Observations List */}
-        <div className="space-y-4">
+        <div className={`space-y-4 transition-opacity duration-150 ${refreshing ? 'opacity-70' : 'opacity-100'}`}>
           {filteredObservations.length > 0 ? (
             filteredObservations.map((obs) => (
               <div key={obs.id} className="bg-white rounded-[16px] border border-gray-100 p-4 md:p-6 shadow-[0_2px_15px_-5px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_25px_-5px_rgba(0,0,0,0.06)] transition-shadow flex flex-col sm:flex-row items-start gap-4 md:gap-6">
@@ -242,6 +292,56 @@ const DaycareObservations = () => {
                No observations found matching your criteria.
             </div>
           )}
+        </div>
+
+        <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white rounded-[14px] border border-gray-100 px-5 py-4 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
+          <span className="text-[12px] font-medium text-[#64748b]">
+            Showing {filteredObservations.length ? ((pagination.page - 1) * pagination.limit) + 1 : 0}
+            {' - '}
+            {Math.min(pagination.page * pagination.limit, pagination.total)}
+            {' '}of {pagination.total.toLocaleString()} observations
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={pagination.page <= 1}
+              className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[#e2e8f0] bg-white text-[#64748b] transition-colors hover:bg-[#f1f5f9] disabled:cursor-not-allowed disabled:opacity-40"
+              title="Previous page"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, index) => {
+              const totalPages = Math.max(1, pagination.totalPages);
+              const start = Math.min(Math.max(1, pagination.page - 2), Math.max(1, totalPages - 4));
+              const pageNumber = start + index;
+              if (pageNumber > totalPages) return null;
+              const active = pageNumber === pagination.page;
+              return (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  onClick={() => setPage(pageNumber)}
+                  className={`h-9 min-w-9 rounded-lg border px-3 text-[12px] font-bold transition-colors ${
+                    active
+                      ? 'border-[#06b6d4] bg-[#06b6d4] text-white'
+                      : 'border-[#e2e8f0] bg-white text-[#475569] hover:bg-[#f1f5f9]'
+                  }`}
+                >
+                  {pageNumber}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.min(pagination.totalPages, current + 1))}
+              disabled={pagination.page >= pagination.totalPages}
+              className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-[#e2e8f0] bg-white text-[#64748b] transition-colors hover:bg-[#f1f5f9] disabled:cursor-not-allowed disabled:opacity-40"
+              title="Next page"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Delete Confirmation Modal */}

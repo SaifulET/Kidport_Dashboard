@@ -71,9 +71,7 @@ const DaycareChildren = () => {
 
   const handleDeleteConfirm = () => {
     if (childToDelete) {
-      apiPatch(`/admin/children/${childToDelete.id}/status`, { status: 'deleted' }).catch((error) => {
-        console.error("Error deleting child:", error);
-      });
+      apiPatch(`/admin/children/${childToDelete.id}/status`, { status: 'deleted' }).catch(() => {});
       setData(prev => ({
         ...prev,
         stats: {
@@ -91,9 +89,7 @@ const DaycareChildren = () => {
   const handleBlockConfirm = () => {
     if (childToBlock) {
       const nextBlocked = !childToBlock.blocked;
-      apiPatch(`/admin/children/${childToBlock.id}/status`, { status: nextBlocked ? 'archived' : 'active' }).catch((error) => {
-        console.error("Error updating child:", error);
-      });
+      apiPatch(`/admin/children/${childToBlock.id}/status`, { status: nextBlocked ? 'archived' : 'active' }).catch(() => {});
       setData(prev => ({
         ...prev,
         children: prev.children.map(c => 
@@ -126,9 +122,7 @@ const DaycareChildren = () => {
           children: childrenResponse.data.map((child) => ({ ...child, color: 'bg-[#06b6d4]' })),
           totalChildren: childrenResponse.pagination.total
         });
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
+      } catch (_error) {} finally {
         setLoading(false);
       }
     };
@@ -159,6 +153,26 @@ const DaycareChildren = () => {
     });
   }, [data, search, ageFilter]);
 
+  const displayTotal = filteredChildren.length;
+  const totalPages = Math.ceil(displayTotal / itemsPerPage) || 1;
+  const safePage = Math.min(page, totalPages);
+  const pageWindowStart = Math.min(Math.max(1, safePage - 1), Math.max(1, totalPages - 2));
+  const visiblePages = Array.from(
+    { length: Math.min(3, totalPages) },
+    (_, index) => pageWindowStart + index
+  ).filter((pageNumber) => pageNumber <= totalPages);
+
+  useEffect(() => {
+    if (page !== safePage) {
+      setPage(safePage);
+    }
+  }, [page, safePage]);
+
+  const startIndex = (safePage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, displayTotal);
+
+  const currentChildren = filteredChildren.slice(startIndex, endIndex);
+
   if (loading || !data) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -169,13 +183,6 @@ const DaycareChildren = () => {
       </div>
     );
   }
-
-  const displayTotal = filteredChildren.length;
-  const totalPages = Math.ceil(displayTotal / itemsPerPage) || 1;
-  const startIndex = (page - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, displayTotal);
-
-  const currentChildren = filteredChildren.slice(startIndex, endIndex);
 
   return (
     <div className="min-h-screen bg-[#fdfdfd] p-4 md:p-6 lg:p-10 font-sans text-[#1e293b]">
@@ -403,13 +410,13 @@ const DaycareChildren = () => {
           <div className="flex gap-1.5">
             <button
               onClick={() => setPage(prev => Math.max(prev - 1, 1))}
-              disabled={page === 1}
+              disabled={safePage === 1}
               className="w-8 h-8 flex items-center justify-center bg-white text-[#64748b] hover:bg-[#f1f5f9] transition-colors text-[13px] font-bold disabled:opacity-50 disabled:cursor-not-allowed border border-[#e2e8f0] rounded-lg"
             >
               &lt;
             </button>
 
-            {Array.from({ length: 3 }, (_, i) => i + 1).map((p) => (
+            {visiblePages.map((p) => (
               <button
                 key={p}
                 onClick={() => setPage(p)}
@@ -424,7 +431,7 @@ const DaycareChildren = () => {
 
             <button
               onClick={() => setPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={page === totalPages || totalPages === 0}
+              disabled={safePage === totalPages}
               className="w-8 h-8 flex items-center justify-center bg-white text-[#64748b] hover:bg-[#f1f5f9] transition-colors text-[13px] font-bold disabled:opacity-50 disabled:cursor-not-allowed border border-[#e2e8f0] rounded-lg"
             >
               &gt;

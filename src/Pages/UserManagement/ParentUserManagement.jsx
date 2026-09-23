@@ -106,9 +106,7 @@ const ParentUserManagement = () => {
             { time: '11:02 AM', text: <>New registration: <span className="font-bold">linda.v@care.com</span> (Daycare)</> }
           ],
         });
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      } finally {
+      } catch (_error) {} finally {
         setLoading(false);
       }
     };

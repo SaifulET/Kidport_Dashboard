@@ -1,49 +1,62 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Target, Brain, CheckCircle, AlertCircle, Zap, PieChart as PieChartIcon, LayoutGrid, Loader2 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
   BarChart, Bar
 } from 'recharts';
+import { apiGet } from '../../lib/api';
+
+const emptyAnalytics = {
+  stats: {
+    totalMilestones: 0,
+    aiProcessed: 0,
+    accuracyRate: 0,
+    flaggedForReview: 0
+  },
+  lineData: [],
+  pieData: [],
+  barData: [],
+  domains: []
+};
+
+const formatNumber = (value) => Number(value || 0).toLocaleString();
 
 const DaycareAIMonitoring = () => {
+  const [data, setData] = useState(emptyAnalytics);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => setLoading(false), 1500);
-    return () => clearTimeout(timer);
+    let active = true;
+
+    const loadAnalytics = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const response = await apiGet('/admin/milestones-ai');
+        if (active) setData(response.data || emptyAnalytics);
+      } catch (error) {
+        if (active) setError(error.message || 'Failed to load milestones and AI analytics');
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    loadAnalytics();
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const lineData = [
-    { name: 'Mon', processed: 230, milestones: 180 },
-    { name: 'Tue', processed: 260, milestones: 200 },
-    { name: 'Wed', processed: 190, milestones: 160 },
-    { name: 'Thu', processed: 310, milestones: 270 },
-    { name: 'Fri', processed: 280, milestones: 230 },
-    { name: 'Sat', processed: 150, milestones: 130 },
-    { name: 'Sun', processed: 140, milestones: 120 },
-  ];
-
-  const pieData = [
-    { name: 'Accurate', value: 87, color: '#10b981' },
-    { name: 'Reviewed', value: 10, color: '#f59e0b' },
-    { name: 'Corrected', value: 3, color: '#ef4444' }
-  ];
-
-  const barData = [
-    { name: 'Language', achieved: 234, pending: 89 },
-    { name: 'Motor', achieved: 198, pending: 76 },
-    { name: 'Social', achieved: 167, pending: 54 },
-    { name: 'Cognitive', achieved: 145, pending: 67 },
-  ];
+  const { stats, lineData, pieData, barData, domains } = data;
 
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-gray-400">
           <Loader2 className="animate-spin" size={32} />
-          <p className="text-[10px] font-bold tracking-widest uppercase">Loading Analytics...</p>
+          <p className="text-[10px] font-bold tracking-widest uppercase">Loading Milestones & AI...</p>
         </div>
       </div>
     );
@@ -66,7 +79,7 @@ const DaycareAIMonitoring = () => {
               <Target size={20} strokeWidth={2.5} />
             </div>
             <p className="text-[12px] font-medium text-[#64748b] mb-1">Total Milestones</p>
-            <h3 className="text-[28px] font-bold text-[#0f172a] leading-none">3,892</h3>
+            <h3 className="text-[28px] font-bold text-[#0f172a] leading-none">{formatNumber(stats.totalMilestones)}</h3>
           </div>
 
           <div className="bg-white rounded-[14px] border border-gray-100 p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
@@ -74,7 +87,7 @@ const DaycareAIMonitoring = () => {
               <Brain size={20} strokeWidth={2.5} />
             </div>
             <p className="text-[12px] font-medium text-[#64748b] mb-1">AI Processed</p>
-            <h3 className="text-[28px] font-bold text-[#0f172a] leading-none">3,456</h3>
+            <h3 className="text-[28px] font-bold text-[#0f172a] leading-none">{formatNumber(stats.aiProcessed)}</h3>
           </div>
 
           <div className="bg-white rounded-[14px] border border-gray-100 p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
@@ -82,7 +95,7 @@ const DaycareAIMonitoring = () => {
               <CheckCircle size={20} strokeWidth={2.5} />
             </div>
             <p className="text-[12px] font-medium text-[#64748b] mb-1">Accuracy Rate</p>
-            <h3 className="text-[28px] font-bold text-[#0f172a] leading-none">94.2%</h3>
+            <h3 className="text-[28px] font-bold text-[#0f172a] leading-none">{stats.accuracyRate}%</h3>
           </div>
 
           <div className="bg-white rounded-[14px] border border-gray-100 p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
@@ -90,9 +103,15 @@ const DaycareAIMonitoring = () => {
               <AlertCircle size={20} strokeWidth={2.5} />
             </div>
             <p className="text-[12px] font-medium text-[#64748b] mb-1">Flagged for Review</p>
-            <h3 className="text-[28px] font-bold text-[#0f172a] leading-none">23</h3>
+            <h3 className="text-[28px] font-bold text-[#0f172a] leading-none">{formatNumber(stats.flaggedForReview)}</h3>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-6 rounded-[14px] border border-red-100 bg-red-50 px-4 py-3 text-[13px] font-semibold text-red-600">
+            {error}
+          </div>
+        )}
 
         {/* Charts Row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -197,110 +216,43 @@ const DaycareAIMonitoring = () => {
 
         {/* Domain Detail Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          
-          <div className="bg-white rounded-[14px] border border-gray-100 p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
-            <h4 className="text-[14px] font-bold text-[#0f172a] mb-5">Language</h4>
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between items-center text-[12px]">
-                <span className="text-[#64748b]">Achieved</span>
-                <span className="font-bold text-[#1e293b]">234</span>
-              </div>
-              <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-[#06b6d4] rounded-full" style={{ width: '72.4%' }}></div>
-              </div>
-              
-              <div className="flex justify-between items-center text-[12px]">
-                <span className="text-[#64748b]">Pending</span>
-                <span className="font-bold text-[#1e293b]">89</span>
-              </div>
-              <div className="flex justify-between items-center text-[12px]">
-                <span className="text-[#64748b]">Total</span>
-                <span className="font-bold text-[#1e293b]">323</span>
-              </div>
-            </div>
-            <div>
-              <p className="text-[20px] font-bold text-[#06b6d4] mb-0.5">72.4%</p>
-              <p className="text-[11px] text-[#94a3b8]">Completion Rate</p>
-            </div>
-          </div>
+          {domains.length > 0 ? (
+            domains.map((domain, index) => {
+              const colors = ['#06b6d4', '#fbbf24', '#fca5a5', '#a855f7', '#10b981', '#ec4899'];
+              const color = colors[index % colors.length];
+              return (
+                <div key={domain.id} className="bg-white rounded-[14px] border border-gray-100 p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
+                  <h4 className="text-[14px] font-bold text-[#0f172a] mb-5">{domain.name}</h4>
+                  <div className="space-y-3 mb-6">
+                    <div className="flex justify-between items-center text-[12px]">
+                      <span className="text-[#64748b]">Achieved</span>
+                      <span className="font-bold text-[#1e293b]">{formatNumber(domain.achieved)}</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${domain.completionRate}%`, backgroundColor: color }}></div>
+                    </div>
 
-          <div className="bg-white rounded-[14px] border border-gray-100 p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
-            <h4 className="text-[14px] font-bold text-[#0f172a] mb-5">Motor</h4>
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between items-center text-[12px]">
-                <span className="text-[#64748b]">Achieved</span>
-                <span className="font-bold text-[#1e293b]">198</span>
-              </div>
-              <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-[#fbbf24] rounded-full" style={{ width: '72.3%' }}></div>
-              </div>
-              
-              <div className="flex justify-between items-center text-[12px]">
-                <span className="text-[#64748b]">Pending</span>
-                <span className="font-bold text-[#1e293b]">76</span>
-              </div>
-              <div className="flex justify-between items-center text-[12px]">
-                <span className="text-[#64748b]">Total</span>
-                <span className="font-bold text-[#1e293b]">274</span>
-              </div>
+                    <div className="flex justify-between items-center text-[12px]">
+                      <span className="text-[#64748b]">Pending</span>
+                      <span className="font-bold text-[#1e293b]">{formatNumber(domain.pending)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[12px]">
+                      <span className="text-[#64748b]">Total</span>
+                      <span className="font-bold text-[#1e293b]">{formatNumber(domain.total)}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[20px] font-bold mb-0.5" style={{ color }}>{domain.completionRate}%</p>
+                    <p className="text-[11px] text-[#94a3b8]">Completion Rate</p>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="col-span-full py-12 text-center text-[14px] font-medium text-[#64748b] bg-white rounded-[14px] border border-gray-100">
+              No milestone domain data available yet.
             </div>
-            <div>
-              <p className="text-[20px] font-bold text-[#fbbf24] mb-0.5">72.3%</p>
-              <p className="text-[11px] text-[#94a3b8]">Completion Rate</p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-[14px] border border-gray-100 p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
-            <h4 className="text-[14px] font-bold text-[#0f172a] mb-5">Social</h4>
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between items-center text-[12px]">
-                <span className="text-[#64748b]">Achieved</span>
-                <span className="font-bold text-[#1e293b]">167</span>
-              </div>
-              <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-[#fca5a5] rounded-full" style={{ width: '75.6%' }}></div>
-              </div>
-              
-              <div className="flex justify-between items-center text-[12px]">
-                <span className="text-[#64748b]">Pending</span>
-                <span className="font-bold text-[#1e293b]">54</span>
-              </div>
-              <div className="flex justify-between items-center text-[12px]">
-                <span className="text-[#64748b]">Total</span>
-                <span className="font-bold text-[#1e293b]">221</span>
-              </div>
-            </div>
-            <div>
-              <p className="text-[20px] font-bold text-[#fca5a5] mb-0.5">75.6%</p>
-              <p className="text-[11px] text-[#94a3b8]">Completion Rate</p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-[14px] border border-gray-100 p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
-            <h4 className="text-[14px] font-bold text-[#0f172a] mb-5">Cognitive</h4>
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between items-center text-[12px]">
-                <span className="text-[#64748b]">Achieved</span>
-                <span className="font-bold text-[#1e293b]">145</span>
-              </div>
-              <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-[#a855f7] rounded-full" style={{ width: '68.4%' }}></div>
-              </div>
-              
-              <div className="flex justify-between items-center text-[12px]">
-                <span className="text-[#64748b]">Pending</span>
-                <span className="font-bold text-[#1e293b]">67</span>
-              </div>
-              <div className="flex justify-between items-center text-[12px]">
-                <span className="text-[#64748b]">Total</span>
-                <span className="font-bold text-[#1e293b]">212</span>
-              </div>
-            </div>
-            <div>
-              <p className="text-[20px] font-bold text-[#a855f7] mb-0.5">68.4%</p>
-              <p className="text-[11px] text-[#94a3b8]">Completion Rate</p>
-            </div>
-          </div>
+          )}
 
         </div>
 

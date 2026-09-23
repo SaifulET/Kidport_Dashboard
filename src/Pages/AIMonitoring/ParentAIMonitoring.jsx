@@ -1,9 +1,58 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Loader2, CheckCircle2, X, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, X, AlertTriangle } from 'lucide-react';
+
+const STATIC_AI_MONITORING_DATA = {
+  stats: {
+    totalFlags: '1,284',
+    highSeverity: '12',
+    unresolved: '48'
+  },
+  flags: [
+    {
+      id: 1,
+      childName: 'Liam Peterson',
+      domain: 'LANGUAGE',
+      severity: 'HIGH',
+      description: 'Persistent regression in expressive vocabulary over 3 consecutive sessions. Phonemic awareness declining.',
+      status: 'UNRESOLVED'
+    },
+    {
+      id: 2,
+      childName: 'Sophia Chen',
+      domain: 'MOTOR SKILLS',
+      severity: 'MEDIUM',
+      description: 'Avoidance of pincer-grip activities noted in creative module. Possible fine motor delay.',
+      status: 'UNRESOLVED'
+    },
+    {
+      id: 3,
+      childName: 'Marcus Thorne',
+      domain: 'COGNITIVE',
+      severity: 'LOW',
+      description: 'Minor delay in pattern recognition during logic assessment. Improved in follow-up.',
+      status: 'RESOLVED'
+    },
+    {
+      id: 4,
+      childName: 'Elena Rodriguez',
+      domain: 'SOCIAL/EMOTIONAL',
+      severity: 'HIGH',
+      description: 'Sudden withdrawal from peer interaction. Flags for acute social anxiety indicators.',
+      status: 'UNRESOLVED'
+    },
+    {
+      id: 5,
+      childName: 'Oliver Smith',
+      domain: 'LANGUAGE',
+      severity: 'LOW',
+      description: 'Slight delay in response time during reading comprehension. Noted for observation.',
+      status: 'RESOLVED'
+    }
+  ]
+};
 
 const ParentAIMonitoring = () => {
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState(null);
+  const [data] = useState(STATIC_AI_MONITORING_DATA);
   
   // Filters and Pagination State
   const [severityFilter, setSeverityFilter] = useState('All'); // All, High, Medium, Low
@@ -45,71 +94,6 @@ const ParentAIMonitoring = () => {
     document.body.removeChild(link);
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        setData({
-          stats: {
-            totalFlags: '1,284',
-            highSeverity: '12',
-            unresolved: '48'
-          },
-          flags: [
-            {
-              id: 1,
-              childName: 'Liam Peterson',
-              domain: 'LANGUAGE',
-              severity: 'HIGH',
-              description: 'Persistent regression in expressive vocabulary over 3 consecutive sessions. Phonemic awareness declining.',
-              status: 'UNRESOLVED'
-            },
-            {
-              id: 2,
-              childName: 'Sophia Chen',
-              domain: 'MOTOR SKILLS',
-              severity: 'MEDIUM',
-              description: 'Avoidance of pincer-grip activities noted in creative module. Possible fine motor delay.',
-              status: 'UNRESOLVED'
-            },
-            {
-              id: 3,
-              childName: 'Marcus Thorne',
-              domain: 'COGNITIVE',
-              severity: 'LOW',
-              description: 'Minor delay in pattern recognition during logic assessment. Improved in follow-up.',
-              status: 'RESOLVED'
-            },
-            {
-              id: 4,
-              childName: 'Elena Rodriguez',
-              domain: 'SOCIAL/EMOTIONAL',
-              severity: 'HIGH',
-              description: 'Sudden withdrawal from peer interaction. Flags for acute social anxiety indicators.',
-              status: 'UNRESOLVED'
-            },
-            {
-              id: 5,
-              childName: 'Oliver Smith',
-              domain: 'LANGUAGE',
-              severity: 'LOW',
-              description: 'Slight delay in response time during reading comprehension. Noted for observation.',
-              status: 'RESOLVED'
-            }
-          ]
-        });
-      } catch (error) {
-        console.error("Error fetching AI monitoring data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, []);
-
   // Filter Logic
   const filteredFlags = useMemo(() => {
     if (!data) return [];
@@ -125,17 +109,6 @@ const ParentAIMonitoring = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [severityFilter, statusFilter]);
-
-  if (loading || !data) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4 text-gray-400">
-          <Loader2 className="animate-spin" size={32} />
-          <p className="text-[10px] font-bold tracking-widest uppercase">Initializing Neural Net...</p>
-        </div>
-      </div>
-    );
-  }
 
   // Pagination calculation
   const totalItems = filteredFlags.length;

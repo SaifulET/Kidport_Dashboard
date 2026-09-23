@@ -1,9 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Loader2, ListFilter, AlertTriangle, Trash2, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { ListFilter, AlertTriangle, Trash2, X } from 'lucide-react';
+
+const STATIC_OBSERVATIONS = {
+  total: 12456,
+  today: 142,
+  byDaycare: 8924,
+  byParent: 3532,
+  entries: [
+    { id: 1, time: '2 hours ago', child: 'Emma Johnson', event: 'Playing with blocks: Built tower independently', status: ['PROCESSED'] },
+    { id: 2, time: '3 hours ago', child: 'Liam Smith', event: 'Speaking in sentences: Expressed needs', status: ['PROCESSED'] },
+    { id: 3, time: '5 hours ago', child: 'Olivia Martinez', event: 'Sharing toys: Demonstrated empathy', status: ['PENDING', 'FLAGGED'] },
+    { id: 4, time: '1 day ago', child: 'Noah Brown', event: 'Drawing shapes: Accurate circles and squares', status: ['PROCESSED'] }
+  ]
+};
 
 const ParentObservations = () => {
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(STATIC_OBSERVATIONS);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [obsToDelete, setObsToDelete] = useState(null);
 
@@ -19,37 +31,6 @@ const ParentObservations = () => {
       setObsToDelete(null);
     }
   };
-
-  useEffect(() => {
-    // Simulate data loading
-    const timer = setTimeout(() => {
-      setData({
-        total: 12456,
-        today: 142,
-        byDaycare: 8924,
-        byParent: 3532,
-        entries: [
-          { id: 1, time: '2 hours ago', child: 'Emma Johnson', event: 'Playing with blocks: Built tower independently', status: ['PROCESSED'] },
-          { id: 2, time: '3 hours ago', child: 'Liam Smith', event: 'Speaking in sentences: Expressed needs', status: ['PROCESSED'] },
-          { id: 3, time: '5 hours ago', child: 'Olivia Martinez', event: 'Sharing toys: Demonstrated empathy', status: ['PENDING', 'FLAGGED'] },
-          { id: 4, time: '1 day ago', child: 'Noah Brown', event: 'Drawing shapes: Accurate circles and squares', status: ['PROCESSED'] }
-        ]
-      });
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (loading || !data) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4 text-gray-400">
-          <Loader2 className="animate-spin" size={32} />
-          <p className="text-[10px] font-bold tracking-widest uppercase">Loading Observations...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen p-8 bg-[#f8fafc] font-sans text-[#1e293b]">

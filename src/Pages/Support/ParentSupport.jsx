@@ -72,7 +72,7 @@ const ParentSupport = () => {
       const response = await apiPost('/support/messages', {
         text: `[New Ticket Opened]\n\nTitle: ${title.trim()}\nUrgency: ${urgency}\n\n${description.trim()}`
       });
-      setMessages((current) => mergeMessages(current, [response.data.sentMessage, response.data.autoReply]));
+      setMessages((current) => mergeMessages(current, response.data.sentMessage));
       setShowNewForm(false);
       setTitle('');
       setDescription('');
@@ -92,7 +92,7 @@ const ParentSupport = () => {
       setError('');
       setChatMessage('');
       const response = await apiPost('/support/messages', { text });
-      setMessages((current) => mergeMessages(current, [response.data.sentMessage, response.data.autoReply]));
+      setMessages((current) => mergeMessages(current, response.data.sentMessage));
     } catch (err) {
       setChatMessage(text);
       setError(err.message || 'Unable to send message.');

@@ -96,9 +96,7 @@ const ParentChildren = () => {
           totalEntries: 1284,
           registryHealth: 94
         });
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
+      } catch (_error) {} finally {
         setLoading(false);
       }
     };

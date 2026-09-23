@@ -1,15 +1,17 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { apiPost } from "../../../lib/api";
 
 const VerifyCode = () => {
-  const [code, setCode] = useState(["", "", "", "", ""]);
+  const [code, setCode] = useState(["", "", "", ""]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const inputRefs = useRef([]);
   const navigate = useNavigate();
 
   useEffect(() => {
-    inputRefs.current = inputRefs.current.slice(0, 5);
+    inputRefs.current = inputRefs.current.slice(0, 4);
   }, []);
 
   const handleChange = (index, value) => {
@@ -17,7 +19,7 @@ const VerifyCode = () => {
     const newCode = [...code];
     newCode[index] = value.slice(0, 1);
     setCode(newCode);
-    if (value && index < 4) {
+    if (value && index < 3) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -28,13 +30,28 @@ const VerifyCode = () => {
     }
   };
 
-  const handleVerify = (e) => {
+  const handleVerify = async (e) => {
     e.preventDefault();
+    const email = sessionStorage.getItem("passwordResetEmail");
+    if (!email) {
+      setError("Please request a password reset code again");
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    setError("");
+
+    try {
+      await apiPost("/auth/verify-reset-otp", {
+        email,
+        otp: code.join("")
+      });
       navigate("/new-password");
-    }, 1500);
+    } catch (error) {
+      setError(error.message || "Invalid or expired code");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -55,18 +72,24 @@ const VerifyCode = () => {
             Verify Access
           </h2>
           <p className="text-[14px] text-[#64748b] font-medium text-center">
-            Enter the 5-digit code sent to your email
+            Enter the 4-digit code sent to your email
           </p>
         </div>
 
         {/* Form section */}
         <form onSubmit={handleVerify}>
+          {error && (
+            <div className="mb-5 text-red-600 text-[13px] font-medium bg-red-50 p-3 rounded-lg border border-red-100">
+              {error}
+            </div>
+          )}
+
           <div className="mb-8">
             <label className="block text-[13px] font-semibold text-[#475569] mb-3">
-              5-Digit Code
+              4-Digit Code
             </label>
             <div className="flex justify-between gap-2">
-              {[0, 1, 2, 3, 4].map((index) => (
+              {[0, 1, 2, 3].map((index) => (
                 <input
                   key={index}
                   ref={(el) => (inputRefs.current[index] = el)}

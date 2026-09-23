@@ -55,7 +55,14 @@ const DaycareSidebar = ({ closeDrawer }) => {
             <Link
               key={item.label}
               to={item.Link}
-              onClick={closeDrawer}
+              onClick={() => {
+                if (item.Link === '/observations') {
+                  const clickedAt = performance.now();
+                  window.__observationClickAt = clickedAt;
+                  sessionStorage.setItem('observationClickAt', String(clickedAt));
+                                  }
+                closeDrawer?.();
+              }}
               className={`flex items-center gap-3.5 px-4 py-3 rounded-full transition-colors ${isActive
                 ? "bg-[#bdf0f1] text-[#1aa3b9] font-semibold"
                 : "text-[#4a5568] hover:bg-gray-50 font-medium"

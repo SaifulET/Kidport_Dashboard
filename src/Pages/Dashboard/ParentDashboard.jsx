@@ -32,8 +32,7 @@ export default function ParentDashboard() {
         doc.text(`Daily Observations: ${data.stats[3].value}`, 20, 80);
         doc.save("system_overview_report.pdf");
       } catch (err) {
-        console.error("Error generating PDF", err);
-        alert("Failed to generate report.");
+                alert("Failed to generate report.");
       } finally {
         setIsGenerating(false);
       }
@@ -79,9 +78,7 @@ export default function ParentDashboard() {
           ],
           totalEvents: 1284,
         });
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
+      } catch (_error) {} finally {
         setLoading(false);
       }
     };

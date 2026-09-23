@@ -32,8 +32,7 @@ const SubscriptionManagement = () => {
         setTotal(listResponse.pagination.total);
         setSummary(summaryResponse.data);
       } catch (error) {
-        console.error('Error loading subscriptions:', error);
-        setSubscriptions([]);
+                setSubscriptions([]);
       }
     };
 

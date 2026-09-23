@@ -34,7 +34,7 @@ const DEFAULT_TICKETS = [
         id: 3,
         sender: "agent",
         senderName: "Maya",
-        text: "Thanks for reaching out! Let me help you with that. Could you provide more details?",
+        text: "Mock support response.",
         time: "09:58 AM"
       },
       {
@@ -48,7 +48,7 @@ const DEFAULT_TICKETS = [
         id: 5,
         sender: "agent",
         senderName: "Maya",
-        text: "Thanks for reaching out! Let me help you with that. Could you provide more details?",
+        text: "Mock support response.",
         time: "09:59 AM"
       }
     ]
@@ -170,13 +170,43 @@ const normalizeTicket = (ticket) => ({
   ...ticket,
   urgency: normalizeUrgency(ticket.urgency),
   messages: ticket.messages || [],
-  messagesLoaded: Boolean(ticket.messages?.length)
+  messagesLoaded: Boolean(ticket.messages?.length),
+  hasMoreMessages: Boolean(ticket.hasMoreMessages)
 });
+
+const sortTicketsByActivity = (items) =>
+  [...items].sort((a, b) => new Date(b.lastActivity || 0) - new Date(a.lastActivity || 0));
+
+const byOldestFirst = (a, b) => new Date(a.time || a.sentAt || 0) - new Date(b.time || b.sentAt || 0);
 
 const mergeMessages = (current, incoming) => {
   const additions = Array.isArray(incoming) ? incoming : [incoming];
   const existing = new Set(current.map((message) => message.id));
-  return [...current, ...additions.filter((message) => message?.id && !existing.has(message.id))];
+  return [...current, ...additions.filter((message) => message?.id && !existing.has(message.id))].sort(byOldestFirst);
+};
+
+const prependMessages = (current, incoming) => {
+  const additions = Array.isArray(incoming) ? incoming : [incoming];
+  const existing = new Set(current.map((message) => message.id));
+  return [...additions.filter((message) => message?.id && !existing.has(message.id)), ...current].sort(byOldestFirst);
+};
+
+const formatReadableTime = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+};
+
+const latestUserMessage = (ticket) => {
+  const messages = ticket.messages || [];
+  const latest = [...messages].reverse().find((message) => message.sender === 'parent');
+  return latest?.text || ticket.description || 'No message preview available.';
 };
 
 const DaycareSupport = () => {
@@ -187,19 +217,25 @@ const DaycareSupport = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const messagesEndRef = useRef(null);
   const ticketsRef = useRef([]);
+  const loadingMessagesRef = useRef(new Set());
+  const suppressNextScrollRef = useRef(false);
 
   useEffect(() => {
     ticketsRef.current = tickets;
   }, [tickets]);
 
+  const activeTicket = tickets.find(t => t.id === activeTicketId);
+
   const fetchTickets = useCallback(async () => {
-    try {
+    const startedAt = performance.now();
+        try {
       const response = await apiGet('/admin/support/tickets?limit=100');
-      setTickets(response.data.map(normalizeTicket));
-    } catch (error) {
-      console.error("Error fetching support tickets:", error);
-      setTickets([]);
-    }
+      const apiDoneAt = performance.now();
+      setTickets(sortTicketsByActivity(response.data.map(normalizeTicket)));
+          } catch (error) {
+            setTickets([]);
+    } finally {
+          }
   }, []);
 
   useEffect(() => {
@@ -207,85 +243,145 @@ const DaycareSupport = () => {
   }, [fetchTickets]);
 
   useEffect(() => {
-    const socket = createSocket();
+        const socket = createSocket();
+
+    socket.on('connect', () => {
+          });
+
+    socket.on('connect_error', (error) => {
+          });
 
     socket.on('support:ticket', (ticket) => {
+      const startedAt = performance.now();
       setTickets((previous) => {
         const nextTicket = normalizeTicket(ticket);
         const existing = previous.find((item) => item.id === nextTicket.id);
-        if (!existing) return [nextTicket, ...previous];
+                if (!existing) return sortTicketsByActivity([nextTicket, ...previous]);
 
-        return previous.map((item) =>
+        return sortTicketsByActivity(previous.map((item) =>
           item.id === nextTicket.id
-            ? { ...item, ...nextTicket, messages: item.messages || [], messagesLoaded: item.messagesLoaded }
+            ? {
+                ...item,
+                ...nextTicket,
+                messages: item.messages || [],
+                messagesLoaded: item.messagesLoaded,
+                hasMoreMessages: item.hasMoreMessages
+              }
             : item
-        );
+        ));
       });
     });
 
     socket.on('support:ticket:deleted', ({ ticketId }) => {
-      setTickets((previous) => previous.filter((ticket) => ticket.id !== ticketId));
+            setTickets((previous) => previous.filter((ticket) => ticket.id !== ticketId));
       setActiveTicketId((current) => (current === ticketId ? null : current));
-    });
+          });
 
     socket.on('support:message', ({ userId, message }) => {
+      const startedAt = performance.now();
       const hasMatchingTicket = ticketsRef.current.some((ticket) => ticket.userId === userId);
 
       setTickets((previous) =>
-        previous.map((ticket) => {
+        sortTicketsByActivity(previous.map((ticket) => {
           if (ticket.userId !== userId) return ticket;
 
           return {
             ...ticket,
             lastActivity: message.time || new Date().toISOString(),
             messageCount: (ticket.messageCount || 0) + 1,
-            messages: ticket.messagesLoaded ? mergeMessages(ticket.messages, message) : ticket.messages
+            messages: mergeMessages(ticket.messages || [], message)
           };
-        })
+        }))
       );
 
       if (!hasMatchingTicket) {
         fetchTickets();
       }
-    });
+          });
 
-    return () => socket.disconnect();
+        return () => socket.disconnect();
   }, [fetchTickets]);
 
   useEffect(() => {
     const loadMessages = async () => {
       const activeTicket = tickets.find(t => t.id === activeTicketId);
       if (!activeTicket?.userId || activeTicket.messagesLoaded) return;
+      if (loadingMessagesRef.current.has(activeTicket.userId)) return;
 
       try {
-        const response = await apiGet(`/admin/support/tickets/${activeTicket.userId}/messages?limit=100`);
+        loadingMessagesRef.current.add(activeTicket.userId);
+        const startedAt = performance.now();
+                const response = await apiGet(`/admin/support/tickets/${activeTicket.userId}/messages?limit=10`);
+        const apiDoneAt = performance.now();
         setTickets((previous) =>
           previous.map((ticket) =>
-            ticket.id === activeTicket.id ? { ...ticket, messages: response.data, messagesLoaded: true } : ticket
+            ticket.id === activeTicket.id
+              ? {
+                  ...ticket,
+                  messages: response.data,
+                  messagesLoaded: true,
+                  hasMoreMessages: Boolean(response.pagination?.hasMore)
+                }
+              : ticket
           )
         );
-      } catch (error) {
-        console.error("Error fetching support messages:", error);
-      }
+              } catch (_error) {} finally {
+        loadingMessagesRef.current.delete(activeTicket.userId);
+              }
     };
 
     loadMessages();
   }, [activeTicketId, tickets]);
 
+  const handleLoadPreviousMessages = async () => {
+    if (!activeTicket?.userId || loadingMessagesRef.current.has(activeTicket.userId)) return;
+    const oldestLoadedMessage = activeTicket.messages?.[0];
+    const beforeTime = oldestLoadedMessage?.time;
+    if (!beforeTime) return;
+
+    try {
+      loadingMessagesRef.current.add(activeTicket.userId);
+      const startedAt = performance.now();
+            suppressNextScrollRef.current = true;
+      const response = await apiGet(
+        `/admin/support/tickets/${activeTicket.userId}/messages?limit=10&before=${encodeURIComponent(beforeTime)}`
+      );
+      const apiDoneAt = performance.now();
+      setTickets((previous) =>
+        previous.map((ticket) =>
+          ticket.id === activeTicket.id
+            ? {
+                ...ticket,
+                messages: prependMessages(ticket.messages || [], response.data || []),
+                messagesLoaded: true,
+                hasMoreMessages: Boolean(response.pagination?.hasMore)
+              }
+            : ticket
+        )
+      );
+          } catch (_error) {} finally {
+      loadingMessagesRef.current.delete(activeTicket.userId);
+          }
+  };
+
   useEffect(() => {
+    if (suppressNextScrollRef.current) {
+      suppressNextScrollRef.current = false;
+      return;
+    }
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [activeTicketId, tickets]);
-
-  const activeTicket = tickets.find(t => t.id === activeTicketId);
+  }, [activeTicketId, activeTicket?.messages?.length]);
 
   const handleSendReply = async (e) => {
     e.preventDefault();
     if (!replyMessage.trim() || !activeTicketId) return;
     if (!activeTicket?.userId) return;
 
-    const response = await apiPost(`/admin/support/tickets/${activeTicket.userId}/messages`, { text: replyMessage.trim() });
+    const startedAt = performance.now();
+        const response = await apiPost(`/admin/support/tickets/${activeTicket.userId}/messages`, { text: replyMessage.trim() });
+    const apiDoneAt = performance.now();
     const newReply = response.data;
 
     const updated = tickets.map(t => {
@@ -302,7 +398,7 @@ const DaycareSupport = () => {
 
     setTickets(updated);
     setReplyMessage("");
-  };
+          };
 
   const handleResolveTicket = async () => {
     if (!activeTicketId) return;
@@ -340,7 +436,6 @@ const DaycareSupport = () => {
               {tickets.length > 0 ? (
                 tickets.map((t) => {
                   const isActive = t.id === activeTicketId;
-                  const lastMsg = t.messages[t.messages.length - 1];
                   return (
                     <div 
                       key={t.id}
@@ -351,23 +446,15 @@ const DaycareSupport = () => {
                           : 'hover:bg-gray-50 border-l-4 border-l-transparent'
                       }`}
                     >
-                      <div className="flex justify-between items-start gap-2 mb-2">
-                        <span className="text-[11px] font-bold text-gray-400 font-mono shrink-0">{t.id}</span>
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 ${
-                          t.urgency === 'High' ? 'bg-red-50 text-red-600 border border-red-100' :
-                          t.urgency === 'Medium' ? 'bg-yellow-50 text-yellow-600 border border-yellow-100' :
-                          'bg-gray-50 text-gray-500 border border-gray-200'
-                        }`}>
-                          {t.urgency}
-                        </span>
-                      </div>
-
-                      <h4 className="text-[13px] font-bold text-[#1e293b] leading-tight mb-1 truncate">{t.title}</h4>
-                      <p className="text-[12px] text-gray-500 line-clamp-1 mb-2">{lastMsg ? lastMsg.text : t.description}</p>
+                      <h4 className="text-[13px] font-bold text-[#1e293b] leading-tight mb-1 truncate">
+                        {t.parentName || 'Unknown user'}
+                      </h4>
+                      <p className="text-[11px] text-gray-400 line-clamp-1 mb-2">{t.parentEmail}</p>
+                      <p className="text-[12px] text-gray-500 line-clamp-2 mb-2">{latestUserMessage(t)}</p>
                       
                       <div className="flex justify-between items-center text-[10px] text-gray-400 font-semibold uppercase">
-                        <span>{t.parentName}</span>
-                        <span>{t.lastActivity}</span>
+                        <span>{t.messageCount || 0} messages</span>
+                        <span>{formatReadableTime(t.lastActivity)}</span>
                       </div>
                     </div>
                   );
@@ -391,10 +478,12 @@ const DaycareSupport = () => {
                 
                 {/* Active Ticket Header */}
                 <div className="bg-white border-b border-gray-100 px-8 py-5 flex justify-between items-center shrink-0">
-                  <div>
-                    <h3 className="text-[15px] font-bold text-[#0f172a] mb-1">{activeTicket.title}</h3>
-                    <p className="text-[12px] text-[#64748b] flex items-center gap-1.5 font-medium">
-                      <span>Submitted by: <strong>{activeTicket.parentName}</strong> ({activeTicket.parentEmail})</span>
+                  <div className="min-w-0">
+                    <h3 className="text-[15px] font-bold text-[#0f172a] mb-1 truncate">
+                      {activeTicket.parentName || 'Unknown user'}
+                    </h3>
+                    <p className="text-[12px] text-[#64748b] flex items-center gap-1.5 font-medium truncate">
+                      {activeTicket.parentEmail}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -421,39 +510,17 @@ const DaycareSupport = () => {
                 {/* Message Log */}
                 <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4">
                   
-                  {/* Original Issue Details Card */}
-                  <div className="bg-white border border-gray-150 rounded-2xl p-5 shadow-sm space-y-3 mb-6 text-left">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block">Original Issue Report</span>
-                    <div>
-                      <h4 className="text-[14px] font-bold text-[#1e293b]">{activeTicket.title}</h4>
-                      <p className="text-[13px] text-[#64748b] leading-relaxed mt-1">{activeTicket.description}</p>
+                  {activeTicket.hasMoreMessages && (
+                    <div className="mb-4 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={handleLoadPreviousMessages}
+                        className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[#64748b] transition-colors hover:bg-gray-50"
+                      >
+                        Load previous messages
+                      </button>
                     </div>
-                    
-                    {(activeTicket.urgency || activeTicket.attachment) && (
-                      <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-gray-500 pt-3 border-t border-gray-100/60 mt-1">
-                        <div>
-                          <span className="text-gray-400">Urgency:</span>{' '}
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-                            activeTicket.urgency === 'High' ? 'bg-red-50 text-red-600 border border-red-100' :
-                            activeTicket.urgency === 'Medium' ? 'bg-yellow-50 text-yellow-600 border border-yellow-100' :
-                            'bg-gray-50 text-gray-500 border border-gray-200'
-                          }`}>
-                            {activeTicket.urgency}
-                          </span>
-                        </div>
-                        
-                        {activeTicket.attachment && (
-                          <button 
-                            onClick={() => setActiveAttachment(activeTicket.attachment)}
-                            className="flex items-center gap-1.5 text-[#06b6d4] hover:text-[#0891b2] font-semibold hover:underline"
-                          >
-                            <Paperclip size={13} />
-                            <span>{activeTicket.attachment}</span>
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  )}
 
                   {activeTicket.messages.map((msg) => {
                     const isAgent = msg.sender === 'agent';
@@ -467,7 +534,7 @@ const DaycareSupport = () => {
                           <p className="whitespace-pre-wrap">{msg.text}</p>
                         </div>
                         <span className="text-[9px] font-semibold text-[#94a3b8] mt-1 px-1.5 uppercase tracking-wide">
-                          {msg.senderName} &bull; {msg.time}
+                          {msg.senderName} &bull; {formatReadableTime(msg.time)}
                         </span>
                       </div>
                     );
@@ -621,9 +688,7 @@ const DaycareSupport = () => {
               </button>
               <button 
                 onClick={() => {
-                  apiDelete(`/admin/support/tickets/${activeTicketId}`).catch((error) => {
-                    console.error("Error deleting support ticket:", error);
-                  });
+                  apiDelete(`/admin/support/tickets/${activeTicketId}`).catch(() => {});
                   const updated = tickets.filter(t => t.id !== activeTicketId);
                   setTickets(updated);
                   setActiveTicketId(null);

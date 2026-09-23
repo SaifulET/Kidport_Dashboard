@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { apiPost } from "../../../lib/api";
 
 const NewPass = () => {
   const navigate = useNavigate();
@@ -9,7 +10,7 @@ const NewPass = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
       setError("Passwords do not match");
@@ -17,11 +18,19 @@ const NewPass = () => {
     }
     setError("");
     setLoading(true);
-    // Simulating password update
-    setTimeout(() => {
-      setLoading(false);
+
+    try {
+      await apiPost("/auth/reset-password", {
+        newPassword: password,
+        confirmPassword
+      });
+      sessionStorage.removeItem("passwordResetEmail");
       navigate("/sign-in");
-    }, 1500);
+    } catch (error) {
+      setError(error.message || "Failed to reset password");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -32,9 +32,7 @@ const ParentSettings = () => {
         setSavedName(mockData.name);
         setSavedEmail(mockData.email);
 
-      } catch (error) {
-        console.error("Error fetching settings:", error);
-      } finally {
+      } catch (_error) {} finally {
         setLoading(false);
       }
     };
