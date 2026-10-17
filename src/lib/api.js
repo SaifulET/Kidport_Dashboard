@@ -9,6 +9,17 @@ export const API_BASE_URL = (() => {
   return `${trimmed}/api/v1`;
 })();
 
+const ACCESS_REFRESH_SKEW_MS = 2 * 60 * 1000;
+const REFRESH_RETRY_DELAY_MS = 400;
+const SESSION_KEEPALIVE_MS = 60 * 1000;
+const AUTH_NO_REFRESH_PATHS = new Set([
+  '/auth/login',
+  '/auth/admin/login',
+  '/auth/register',
+  '/auth/admin/register',
+  '/auth/refresh-token'
+]);
+
 const addProxyBypassHeaders = (headers) => {
   if (API_BASE_URL.includes('.ngrok-free.')) {
     headers.set('ngrok-skip-browser-warning', 'true');
@@ -45,7 +56,26 @@ export const formatDateOnly = (value) => {
   return date.toISOString().slice(0, 10);
 };
 
+const decodeAccessToken = (token) => {
+  if (!token) return null;
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(normalized));
+  } catch {
+    return null;
+  }
+};
+
+export const isAccessTokenFresh = (token = getAccessToken(), skewMs = ACCESS_REFRESH_SKEW_MS) => {
+  const payload = decodeAccessToken(token);
+  if (!payload?.exp) return false;
+  return payload.exp * 1000 - Date.now() > skewMs;
+};
+
 export const clearSession = () => {
+  stopSessionKeepAlive();
   localStorage.removeItem('user');
   localStorage.removeItem('role');
   localStorage.removeItem('accessToken');
@@ -59,45 +89,113 @@ export const saveSession = ({ user, accessToken, refreshToken }) => {
   }
   if (accessToken) localStorage.setItem('accessToken', accessToken);
   if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+  startSessionKeepAlive();
 };
 
 let refreshPromise = null;
+let keepAliveTimer = null;
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const requestRefresh = async (refreshToken) => {
+  const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(API_BASE_URL.includes('.ngrok-free.') ? { 'ngrok-skip-browser-warning': 'true' } : {})
+    },
+    body: JSON.stringify({ refreshToken })
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload.success === false) return false;
+  saveSession(payload.data || {});
+  return Boolean(getAccessToken());
+};
 
 const refreshSession = async () => {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
 
   if (!refreshPromise) {
-    const startedAt = performance.now();
-        refreshPromise = fetch(`${API_BASE_URL}/auth/refresh-token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(API_BASE_URL.includes('.ngrok-free.') ? { 'ngrok-skip-browser-warning': 'true' } : {})
-      },
-      body: JSON.stringify({ refreshToken })
-    })
-      .then(async (response) => {
-        const responseAt = performance.now();
-        const payload = await response.json().catch(() => ({}));
-                if (!response.ok || payload.success === false) return false;
-        saveSession(payload.data || {});
-        return true;
-      })
-      .finally(() => {
-                refreshPromise = null;
-      });
+    refreshPromise = (async () => {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const currentToken = getRefreshToken();
+        if (!currentToken) return false;
+        try {
+          if (await requestRefresh(currentToken)) return true;
+        } catch {
+          // Retry once on a transient network/refresh failure.
+        }
+        if (attempt === 0) await wait(REFRESH_RETRY_DELAY_MS);
+      }
+      return false;
+    })().finally(() => {
+      refreshPromise = null;
+    });
   }
 
   return refreshPromise;
 };
 
+const startSessionKeepAlive = () => {
+  if (keepAliveTimer || typeof window === 'undefined') return;
+  keepAliveTimer = window.setInterval(() => {
+    if (getRefreshToken() && !isAccessTokenFresh()) {
+      void refreshSession();
+    }
+  }, SESSION_KEEPALIVE_MS);
+};
+
+const stopSessionKeepAlive = () => {
+  if (!keepAliveTimer) return;
+  window.clearInterval(keepAliveTimer);
+  keepAliveTimer = null;
+};
+
+export const ensureSession = async () => {
+  const user = localStorage.getItem('user');
+  const accessToken = getAccessToken();
+  const refreshToken = getRefreshToken();
+
+  if (!user || (!accessToken && !refreshToken)) return false;
+  if (isAccessTokenFresh()) {
+    startSessionKeepAlive();
+    return true;
+  }
+  if (!refreshToken) {
+    if (accessToken && isAccessTokenFresh(accessToken, 0)) {
+      startSessionKeepAlive();
+      return true;
+    }
+    clearSession();
+    return false;
+  }
+
+  const refreshed = await refreshSession();
+  if (refreshed || isAccessTokenFresh(getAccessToken(), 0)) {
+    startSessionKeepAlive();
+    return true;
+  }
+
+  clearSession();
+  return false;
+};
+
+if (typeof window !== 'undefined' && getRefreshToken()) {
+  startSessionKeepAlive();
+}
+
 export const apiRequest = async (path, options = {}, retryOnUnauthorized = true) => {
-  const startedAt = performance.now();
   const requestId =
     options.requestId ||
     (crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`);
   const clientSentAtIso = new Date().toISOString();
+  const canRefresh = retryOnUnauthorized && !AUTH_NO_REFRESH_PATHS.has(path);
+
+  if (canRefresh && getRefreshToken() && !isAccessTokenFresh()) {
+    await refreshSession();
+  }
+
   const token = getAccessToken();
   const headers = new Headers(options.headers || {});
   addProxyBypassHeaders(headers);
@@ -114,21 +212,17 @@ export const apiRequest = async (path, options = {}, retryOnUnauthorized = true)
     init.body = JSON.stringify(options.body);
   }
 
-      const response = await fetch(`${API_BASE_URL}${path}`, init);
-  const responseAt = performance.now();
-  const clientReceivedAtIso = new Date().toISOString();
-    const payload = await response.json().catch(() => ({}));
-  const parsedAt = performance.now();
+  const response = await fetch(`${API_BASE_URL}${path}`, init);
+  const payload = await response.json().catch(() => ({}));
 
-  
-  if (response.status === 401 && retryOnUnauthorized) {
-    const refreshStartedAt = performance.now();
+  if (response.status === 401 && canRefresh) {
     const refreshed = await refreshSession();
-        if (refreshed) {
-      const retried = await apiRequest(path, { ...options, requestId }, false);
-            return retried;
+    if (refreshed) {
+      return apiRequest(path, { ...options, requestId }, false);
     }
-    clearSession();
+    if (!isAccessTokenFresh(getAccessToken(), 0)) {
+      clearSession();
+    }
   }
 
   if (!response.ok || payload.success === false) {
@@ -136,7 +230,7 @@ export const apiRequest = async (path, options = {}, retryOnUnauthorized = true)
     throw new Error(message);
   }
 
-    return payload;
+  return payload;
 };
 
 export const apiGet = (path) => apiRequest(path);
