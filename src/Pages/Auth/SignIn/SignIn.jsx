@@ -111,10 +111,15 @@ const SignIn = () => {
         </form>
 
         {/* Footer */}
-        <div className="border-t border-gray-100 pt-6 flex justify-center items-center">
+        <div className="border-t border-gray-100 pt-6 flex flex-col items-center gap-3">
           <span className="text-[12px] text-gray-500 font-medium">
-            Don't have an account? <Link to="/sign-in" className="text-[#06b6d4] hover:text-[#0891b2] font-semibold">Contact Administrator</Link>
+            Don't have an account? <Link to="/contant" className="text-[#06b6d4] hover:text-[#0891b2] font-semibold">Contact Administrator</Link>
           </span>
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-[11px] font-semibold text-[#94a3b8]">
+            <Link to="/privacy-policy" className="hover:text-[#06b6d4]">Privacy Policy</Link>
+            <Link to="/termsandcondition" className="hover:text-[#06b6d4]">Terms</Link>
+            <Link to="/account-deletion" className="hover:text-[#06b6d4]">Account Deletion</Link>
+          </div>
         </div>
       </div>
     </div>

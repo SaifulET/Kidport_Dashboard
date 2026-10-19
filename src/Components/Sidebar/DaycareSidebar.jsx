@@ -8,6 +8,7 @@ import {
   Settings,
   Eye,
   Layers,
+  FileText,
   MessageSquare,
   LogOut
 } from "lucide-react";
@@ -30,6 +31,7 @@ const DaycareSidebar = ({ closeDrawer }) => {
     { icon: Eye, label: "Observations", Link: "/observations" },
     { icon: Brain, label: "Milestones / AI", Link: "/ai-monitoring" },
     { icon: Settings, label: "Settings", Link: "/settings" },
+    { icon: FileText, label: "Privacy & Terms", Link: "/legal-documents" },
     { icon: MessageSquare, label: "Support Desk", Link: "/support" },
   ];
 

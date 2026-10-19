@@ -17,7 +17,8 @@ const AUTH_NO_REFRESH_PATHS = new Set([
   '/auth/admin/login',
   '/auth/register',
   '/auth/admin/register',
-  '/auth/refresh-token'
+  '/auth/refresh-token',
+  '/legal/contact'
 ]);
 
 const addProxyBypassHeaders = (headers) => {
