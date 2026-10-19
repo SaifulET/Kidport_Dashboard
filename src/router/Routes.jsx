@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import MainLayout from "../Layout/Main/Main";
+import PublicLayout from "../Layout/Public/PublicLayout";
 import PrivateRoute from "./PrivateRoute";
 
 const SignIn = lazy(() => import("../Pages/Auth/SignIn/SignIn"));
@@ -32,6 +33,10 @@ const ParentNotifications = lazy(() => import("../Pages/Notifications/ParentNoti
 const DaycareNotifications = lazy(() => import("../Pages/Notifications/DaycareNotifications"));
 const SupportPage = lazy(() => import("../Pages/Support/Support"));
 const DomainManagement = lazy(() => import("../Pages/Domains/DomainManagement"));
+const LegalDocumentPage = lazy(() => import("../Pages/Legal/LegalDocumentPage"));
+const ContactPage = lazy(() => import("../Pages/Legal/ContactPage"));
+const AccountDeletionPage = lazy(() => import("../Pages/Legal/AccountDeletionPage"));
+const AdminLegalDocuments = lazy(() => import("../Pages/Legal/AdminLegalDocuments"));
 
 const routeLoader = (
   <div className="min-h-screen bg-white flex items-center justify-center text-[10px] font-bold tracking-widest uppercase text-[#94a3b8]">
@@ -63,6 +68,16 @@ export const router = createBrowserRouter([
     element: page(<NewPass />),
   },
   {
+    element: <PublicLayout />,
+    children: [
+      { path: "/privacy-policy", element: page(<LegalDocumentPage documentKey="privacy-policy" />) },
+      { path: "/termsandcondition", element: page(<LegalDocumentPage documentKey="terms" />) },
+      { path: "/contant", element: page(<ContactPage />) },
+      { path: "/contact", element: page(<ContactPage />) },
+      { path: "/account-deletion", element: page(<AccountDeletionPage />) },
+    ],
+  },
+  {
     element: <PrivateRoute />,
     children: [
       {
@@ -86,6 +101,7 @@ export const router = createBrowserRouter([
           { path: "/upload-video", element: page(<UploadVideo />) },
           { path: "/subscription", element: page(<SubscriptionManagement />) },
           { path: "/settings", element: page(<Settings />) },
+          { path: "/legal-documents", element: page(<AdminLegalDocuments />) },
           { path: "/support", element: page(<SupportPage />) },
           { path: "/notifications", element: page(<ParentNotifications />) },
           { path: "/daycare-notifications", element: page(<DaycareNotifications />) },
